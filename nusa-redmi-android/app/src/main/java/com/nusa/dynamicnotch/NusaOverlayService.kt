@@ -193,13 +193,19 @@ class NusaOverlayService : LifecycleService() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        // Window height extends past the 122px HyperOS status bar boundary to guarantee touch delivery
+        val initialW = dpToPx(maxOf(collapsedWidthDp + 20, 136))
+        val initialH = dpToPx(maxOf(collapsedHeightDp + 16, 50))
+
         params = WindowManager.LayoutParams(
-            dpToPx(collapsedWidthDp),
-            dpToPx(collapsedHeightDp),
+            initialW,
+            initialH,
             layoutFlag,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -222,8 +228,9 @@ class NusaOverlayService : LifecycleService() {
         notchCard.setOnClickListener(toggleListener)
         layerPet.setOnClickListener(toggleListener)
 
+        // Instant expand on ACTION_DOWN so touch feels instantaneous
         overlayView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP && !isExpanded) {
+            if (!isExpanded && (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP)) {
                 setNotchState(NotchState.MUSIC)
                 true
             } else {
@@ -267,8 +274,9 @@ class NusaOverlayService : LifecycleService() {
             notchCard.layoutParams = lp
             notchCard.radius = dpToPx(collapsedHeightDp / 2).toFloat()
 
-            params.width = dpToPx(collapsedWidthDp)
-            params.height = dpToPx(collapsedHeightDp)
+            // Extended hit box guarantees touch events bypass HyperOS status bar gesture interceptor
+            params.width = dpToPx(maxOf(collapsedWidthDp + 20, 136))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 16, 50))
         }
 
         try {
@@ -390,9 +398,9 @@ class NusaOverlayService : LifecycleService() {
             notchCard.height, targetH,
             dpToPx(28), dpToPx(collapsedHeightDp / 2)
         ) {
-            // Shrink window back to pill bounds on animation end
-            params.width = targetW
-            params.height = targetH
+            // Shrink window back to hit box bounds on animation end
+            params.width = dpToPx(maxOf(collapsedWidthDp + 20, 136))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 16, 50))
             try {
                 windowManager.updateViewLayout(overlayView, params)
             } catch (e: Exception) {

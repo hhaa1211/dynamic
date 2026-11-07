@@ -1,0 +1,22 @@
+{
+  "name": "Nusa - Living Notch for Redmi Note 13 Pro 5G",
+  "short_name": "Nusa",
+  "description": "Living dynamic notch for music, synced lyrics, focus timer, water reminders and quick shelf on Redmi Note 13 Pro 5G",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#03040a",
+  "theme_color": "#03040a",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

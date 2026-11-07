@@ -1,0 +1,12 @@
+<resources>
+    <color name="void_black">#03040A</color>
+    <color name="panel_black">#0A0D18</color>
+    <color name="notch_background">#000000</color>
+    <color name="cyan_accent">#19B8FF</color>
+    <color name="indigo_accent">#2D5BFF</color>
+    <color name="violet_accent">#7B4BFF</color>
+    <color name="ink_white">#ECEFF7</color>
+    <color name="mist_gray">#8C94A8</color>
+    <color name="line_border">#1AECEFF7</color>
+    <color name="green_charging">#34D399</color>
+</resources>

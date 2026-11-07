@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.NusaDynamicNotch" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/void_black</item>
+        <item name="android:navigationBarColor">@color/void_black</item>
+        <item name="android:windowBackground">@color/void_black</item>
+        <item name="colorPrimary">@color/cyan_accent</item>
+        <item name="colorSecondary">@color/violet_accent</item>
+    </style>
+</resources>

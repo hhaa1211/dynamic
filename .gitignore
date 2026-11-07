@@ -1,0 +1,20 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Android / Gradle
+.gradle/
+build/
+*/build/
+*.iml
+.idea/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.log

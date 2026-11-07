@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>Nusa - Dynamic Notch cho Redmi Note 13 Pro 5G</title>
+  <meta name="description" content="Ứng dụng Dynamic Notch phong cách Nusa cho điện thoại Redmi Note 13 Pro 5G: Âm nhạc, Lời bài hát đồng bộ, Pomodoro, Nhắc uống nước, Shelf và To-do.">
+  <meta name="theme-color" content="#03040a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Device Bar -->
+    <div class="device-toolbar">
+      <div class="device-badge">
+        <span>📱 Redmi Note 13 Pro 5G</span>
+        <span class="badge-tag">AMOLED 120Hz</span>
+      </div>
+      <button class="mode-toggle-btn" id="toggleModeBtn">Mở toàn màn hình</button>
+    </div>
+
+    <!-- Redmi Note 13 Pro 5G Phone Bezel -->
+    <div class="redmi-phone" id="phoneChassis">
+      <div class="phone-screen">
+        <!-- Ambient Glow -->
+        <div class="phone-ambient-light" id="ambientLight"></div>
+
+        <!-- HyperOS Status Bar -->
+        <div class="hyper-status-bar">
+          <div class="status-left">
+            <span id="statusTime">18:55</span>
+          </div>
+          <div class="status-right">
+            <!-- 5G Icon -->
+            <span style="font-size: 11px; font-weight: 800;">5G</span>
+            <!-- Wi-Fi Icon -->
+            <svg class="status-icon" viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+            <!-- Battery Icon -->
+            <div class="battery-pill">
+              <div class="battery-level"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Camera Punch Hole (Redmi Note 13 Pro 5G: centered, 13px) -->
+        <div class="redmi-punch-hole"></div>
+
+        <!-- NUSA DYNAMIC NOTCH -->
+        <div class="notch-wrapper">
+          <div class="nusa-notch" id="nusaNotch" data-state="pet" role="region" aria-label="Nusa Dynamic Notch">
+
+            <!-- 1. Resting Mascot Layer -->
+            <div class="notch-layer layer-pet">
+              <div class="pet-ambient"></div>
+              <div class="pet-eyes">
+                <i class="pet-eye"></i>
+                <i class="pet-eye"></i>
+              </div>
+            </div>
+
+            <!-- 2. Closed / Idle Pill Layer -->
+            <div class="notch-layer layer-idle">
+              <span class="idle-dot"></span>
+              <span class="idle-time" id="idleTime">18:55</span>
+              <div class="eq-bars">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+
+            <!-- 3. Music Player Layer -->
+            <div class="notch-layer layer-music">
+              <div class="music-top">
+                <div class="album-art">🎵</div>
+                <div class="track-meta">
+                  <div class="track-title">Paper Sky</div>
+                  <div class="track-artist">Lumen Coast - Summer Flows</div>
+                </div>
+                <button class="lyrics-pill-btn" id="lyricsPillBtn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                  Lyrics
+                </button>
+              </div>
+
+              <div class="progress-row">
+                <span id="trackTime">02:59</span>
+                <div class="progress-track" id="musicProgressTrack">
+                  <div class="progress-fill" id="musicProgressFill"></div>
+                </div>
+                <span id="trackRemaining">-01:17</span>
+              </div>
+
+              <div class="music-controls">
+                <button class="ctl-btn" id="prevTrackBtn" aria-label="Previous">
+                  <svg viewBox="0 0 24 24"><path d="M11 6 3 12l8 6zM21 6l-8 6 8 6z"/></svg>
+                </button>
+                <button class="ctl-btn play-btn" id="playPauseBtn" aria-label="Play/Pause">
+                  <svg viewBox="0 0 24 24" id="playIcon"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+                </button>
+                <button class="ctl-btn" id="nextTrackBtn" aria-label="Next">
+                  <svg viewBox="0 0 24 24"><path d="m13 6 8 6-8 6zM3 6l8 6-8 6z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 4. Synced Lyrics Layer -->
+            <div class="notch-layer layer-lyrics">
+              <div class="lyrics-header">
+                <span>Synced Lyrics</span>
+                <button class="lyrics-back-btn" id="lyricsBackBtn">← Trình phát</button>
+              </div>
+              <div class="lyrics-box" id="lyricsBox">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+
+            <!-- 5. Pomodoro Focus Timer Layer -->
+            <div class="notch-layer layer-pomo">
+              <div class="pomo-left">
+                <div class="pomo-badge">Tập trung • Hiệp <span id="pomoRoundLabel">2/4</span></div>
+                <div class="pomo-time" id="pomoTime">25:00</div>
+                <div class="pomo-sub">Đến giờ giải lao</div>
+                <div class="pomo-controls">
+                  <button class="pomo-btn" id="pomoToggleBtn">Bắt đầu</button>
+                  <button class="pomo-btn" id="pomoResetBtn">Đặt lại</button>
+                </div>
+              </div>
+              <div class="pomo-right">
+                <svg class="pomo-svg" viewBox="0 0 90 90">
+                  <defs>
+                    <linearGradient id="pomoGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#5B6CFF"/>
+                      <stop offset="100%" stop-color="#A855F7"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="pomo-circle-bg" cx="45" cy="45" r="36"/>
+                  <circle class="pomo-circle-bar" id="pomoCircleBar" cx="45" cy="45" r="36"/>
+                </svg>
+                <span class="pomo-round-label">25m</span>
+              </div>
+            </div>
+
+            <!-- 6. Water Reminder Layer -->
+            <div class="notch-layer layer-water">
+              <div class="water-left">
+                <div class="water-title">Nhắc nhở <span>Uống Nước</span></div>
+                <div class="water-amount"><span id="waterCurrent">1.5</span> <small id="waterGoal">/ 2.0 L</small></div>
+                <div class="water-progress-text">Hôm nay: <b id="waterPct">75%</b> • Tuyệt vời!</div>
+                <div class="water-actions">
+                  <button class="water-btn" id="drinkWaterBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+                    +250ml
+                  </button>
+                </div>
+              </div>
+              <div class="water-right">
+                <div class="water-chart">
+                  <div class="chart-col"><div class="chart-bar"></div></div>
+                  <div class="chart-col"><div class="chart-bar"></div></div>
+                  <div class="chart-col"><div class="chart-bar"></div></div>
+                  <div class="chart-col"><div class="chart-bar"></div></div>
+                  <div class="chart-col"><div class="chart-bar"></div></div>
+                </div>
+                <div class="chart-labels">
+                  <span>09</span><span>12</span><span>15</span><span>18</span><span>21</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7. Shelf & Clipboard Layer -->
+            <div class="notch-layer layer-shelf">
+              <div class="shelf-header">
+                <span>The Shelf & Bộ nhớ tạm</span>
+                <span class="shelf-clear" id="shelfClearBtn">Xóa hết</span>
+              </div>
+              <div class="shelf-items" id="shelfItemsContainer">
+                <!-- Items injected via JS -->
+              </div>
+              <div class="shelf-input-row">
+                <input type="text" class="shelf-input" id="shelfInput" placeholder="Thêm ghi chú nhanh...">
+                <button class="shelf-add-btn" id="shelfAddBtn">Lưu</button>
+              </div>
+            </div>
+
+            <!-- 8. To-Do Layer -->
+            <div class="notch-layer layer-todo">
+              <div class="shelf-header">
+                <span>Công việc hôm nay</span>
+              </div>
+              <div class="todo-list" id="todoListContainer">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- 9. Notification Banner Layer -->
+            <div class="notch-layer layer-notif">
+              <div class="notif-avatar">💬</div>
+              <div class="notif-content">
+                <span class="notif-title" id="notifTitle">Tin nhắn mới</span>
+                <span class="notif-desc" id="notifDesc">Đã hoàn thành đồng bộ với Redmi Note 13 Pro</span>
+              </div>
+              <span class="notif-time">Vừa xong</span>
+            </div>
+
+            <!-- 10. Charging HUD Layer -->
+            <div class="notch-layer layer-charge">
+              <div class="charge-left">
+                <span class="charge-bolt">⚡</span>
+                <span class="charge-text">Siêu sạc Turbo 67W</span>
+              </div>
+              <span class="charge-pct">92%</span>
+            </div>
+
+            <!-- Bottom Dot Indicator (for expanded pages) -->
+            <div class="notch-dots">
+              <span class="notch-dot active"></span>
+              <span class="notch-dot"></span>
+              <span class="notch-dot"></span>
+              <span class="notch-dot"></span>
+              <span class="notch-dot"></span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Phone Home Screen Widgets -->
+        <div class="home-widgets">
+          <div class="clock-widget">
+            <div class="big-clock" id="bigClock">18:55</div>
+            <div class="widget-date" id="widgetDate">Thứ Năm, 7 tháng 11</div>
+          </div>
+
+          <div class="widget-grid">
+            <div class="widget-card">
+              <div class="widget-card-title">
+                <span>Năng lượng</span>
+                <span>⚡</span>
+              </div>
+              <div class="widget-card-value" style="color: #34d399;">92%</div>
+              <div style="font-size: 11px; color: var(--mist);">Pin 5100 mAh</div>
+            </div>
+
+            <div class="widget-card">
+              <div class="widget-card-title">
+                <span>Màn hình</span>
+                <span>✨</span>
+              </div>
+              <div class="widget-card-value" style="color: var(--cyan);">120 Hz</div>
+              <div style="font-size: 11px; color: var(--mist);">1.5K CrystalRes</div>
+            </div>
+          </div>
+
+          <div class="app-dock">
+            <div class="dock-icon">📞</div>
+            <div class="dock-icon">💬</div>
+            <div class="dock-icon">🌐</div>
+            <div class="dock-icon">📷</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Controls Panel for User Testing -->
+    <div class="controls-panel">
+      <div class="control-group-title">Chuyển đổi trạng thái Nusa Notch:</div>
+      <div class="state-buttons">
+        <button class="state-btn active" data-s="pet">🐾 Nghỉ (Mascot)</button>
+        <button class="state-btn" data-s="idle">🔘 Đóng (Pill)</button>
+        <button class="state-btn" data-s="music">🎵 Trình phát nhạc</button>
+        <button class="state-btn" data-s="lyrics">📜 Lời bài hát</button>
+        <button class="state-btn" data-s="pomo">⏳ Pomodoro</button>
+        <button class="state-btn" data-s="water">💧 Uống nước</button>
+        <button class="state-btn" data-s="shelf">📁 The Shelf</button>
+        <button class="state-btn" data-s="todo">✅ Việc cần làm</button>
+        <button class="state-btn" data-s="notif">🔔 Thông báo</button>
+        <button class="state-btn" data-s="charge">⚡ Cắm sạc 67W</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Nusa Notch</string>
+    <string name="notification_service_label">Nusa Media &amp; Notification Service</string>
+    <string name="start_service">Kích hoạt Dynamic Notch</string>
+    <string name="stop_service">Dừng Dynamic Notch</string>
+    <string name="permission_overlay_title">Quyền hiển thị trên ứng dụng khác</string>
+    <string name="permission_notification_title">Quyền truy cập thông báo &amp; âm nhạc</string>
+    <string name="redmi_calibration_title">Căn chỉnh lỗ camera Redmi Note 13 Pro 5G</string>
+</resources>

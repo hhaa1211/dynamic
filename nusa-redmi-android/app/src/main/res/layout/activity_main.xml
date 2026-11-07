@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/void_black"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_pet_ambient"
+                android:gravity="center"
+                android:text="✨"
+                android:textSize="20sp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nusa Notch"
+                    android:textColor="@color/ink_white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tối ưu cho Redmi Note 13 Pro 5G"
+                    android:textColor="@color/cyan_accent"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchEnableNotch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@color/line_border" />
+
+        <!-- Permissions Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CÁC QUYỀN HỆ THỐNG CẦN THIẾT"
+            android:textColor="@color/mist_gray"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- 1. Overlay Permission -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/panel_black"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Quyền vẽ trên ứng dụng khác"
+                        android:textColor="@color/ink_white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Hiển thị Dynamic Notch quanh camera nốt ruồi"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnGrantOverlay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="@color/cyan_accent"
+                    android:text="Cấp quyền"
+                    android:textColor="#000000"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 2. Notification Access -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:cardBackgroundColor="@color/panel_black"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Truy cập thông báo &amp; âm nhạc"
+                        android:textColor="@color/ink_white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tự động đồng bộ Spotify, YouTube Music"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnGrantNotification"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="@color/violet_accent"
+                    android:text="Cấp quyền"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Redmi Note 13 Pro 5G Calibration Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="CĂN CHỈNH CAMERA REDMI NOTE 13 PRO 5G"
+            android:textColor="@color/mist_gray"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/panel_black"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvYOffsetLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Khoảng cách từ mép trên màn hình (Y-Offset): 18dp"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekYOffset"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="60"
+                    android:progress="18"
+                    android:progressTint="@color/cyan_accent"
+                    android:thumbTint="@color/cyan_accent" />
+
+                <TextView
+                    android:id="@+id/tvWidthLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Độ rộng viên thuốc lúc đóng: 92dp"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekNotchWidth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="160"
+                    android:progress="92"
+                    android:progressTint="@color/cyan_accent"
+                    android:thumbTint="@color/cyan_accent" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Quick State Triggers -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="THỬ NGHIỆM TRẠNG THÁI NUSA"
+            android:textColor="@color/mist_gray"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTestPet"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🐾 Pet"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestMusic"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="🎵 Nhạc"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestCharge"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="⚡ Sạc 67W"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

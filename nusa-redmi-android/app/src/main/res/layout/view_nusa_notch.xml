@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/notchContainer"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true">
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/notchCard"
+        android:layout_width="100dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_horizontal"
+        app:cardBackgroundColor="@color/notch_background"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="12dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- 1. Pet / Resting Layer -->
+            <FrameLayout
+                android:id="@+id/layerPet"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="12dp"
+                    android:layout_gravity="bottom"
+                    android:background="@drawable/bg_pet_ambient" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/leftEye"
+                        android:layout_width="7dp"
+                        android:layout_height="11dp"
+                        android:layout_marginEnd="12dp"
+                        android:background="@drawable/bg_notch_pill"
+                        android:backgroundTint="#FFFFFF" />
+
+                    <View
+                        android:id="@+id/rightEye"
+                        android:layout_width="7dp"
+                        android:layout_height="11dp"
+                        android:background="@drawable/bg_notch_pill"
+                        android:backgroundTint="#FFFFFF" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- 2. Idle Collapsed Layer -->
+            <LinearLayout
+                android:id="@+id/layerIdle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:background="@drawable/bg_notch_pill"
+                    android:backgroundTint="@color/cyan_accent" />
+
+                <TextView
+                    android:id="@+id/tvIdleTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="18:55"
+                    android:textColor="@color/ink_white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="lll"
+                    android:textColor="@color/cyan_accent"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 3. Music Player Layer -->
+            <LinearLayout
+                android:id="@+id/layerMusic"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_pet_ambient"
+                        android:gravity="center"
+                        android:text="🎵"
+                        android:textSize="20sp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvMusicTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Paper Sky"
+                            android:textColor="@color/ink_white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvMusicArtist"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Lumen Coast"
+                            android:textColor="@color/mist_gray"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/musicProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp"
+                    android:max="100"
+                    android:progress="45"
+                    android:progressTint="@color/cyan_accent" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btnPrev"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:gravity="center"
+                        android:text="⏮"
+                        android:textColor="@color/ink_white"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/btnPlayPause"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:background="@drawable/bg_notch_pill"
+                        android:backgroundTint="#FFFFFF"
+                        android:gravity="center"
+                        android:text="⏸"
+                        android:textColor="#000000"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/btnNext"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:gravity="center"
+                        android:text="⏭"
+                        android:textColor="@color/ink_white"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 4. Pomodoro Focus Layer -->
+            <LinearLayout
+                android:id="@+id/layerPomo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="POMODORO • HIỆP 2/4"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/tvPomoCountdown"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="24:50"
+                        android:textColor="@color/ink_white"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Đến giờ nghỉ ngắn"
+                        android:textColor="@color/violet_accent"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnPomoToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="@color/indigo_accent"
+                    android:text="Tạm dừng"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- 5. 67W Turbo Charging Layer -->
+            <LinearLayout
+                android:id="@+id/layerCharging"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚡"
+                    android:textColor="@color/green_charging"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Siêu sạc Turbo 67W"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvChargePercent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="92%"
+                    android:textColor="@color/green_charging"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </FrameLayout>
+    </androidx.cardview.widget.CardView>
+</FrameLayout>

@@ -500,72 +500,42 @@ object DynamicNotchViewManager {
         }
     }
 
+    private fun winkBothEyes() {
+        leftEye?.animate()?.scaleY(0.1f)?.setDuration(100)?.withEndAction {
+            leftEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
+        }?.start()
+        rightEye?.animate()?.scaleY(0.1f)?.setDuration(100)?.withEndAction {
+            rightEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
+        }?.start()
+        notchCard?.animate()
+            ?.scaleX(1.1f)
+            ?.scaleY(0.92f)
+            ?.setDuration(110)
+            ?.withEndAction {
+                notchCard?.animate()
+                    ?.scaleX(1f)
+                    ?.scaleY(1f)
+                    ?.setDuration(150)
+                    ?.start()
+            }
+            ?.start()
+    }
+
     private fun setupTouchInteraction() {
         var startX = 0f
         var startY = 0f
         var startTime = 0L
+        var isDownOnCard = false
 
+        // Tap outside to collapse expanded card
         overlayView?.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_OUTSIDE -> {
-                    if (isExpanded) {
-                        collapseToCompact()
-                    }
-                    true
+            if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                if (isExpanded) {
+                    collapseToCompact()
                 }
-                MotionEvent.ACTION_DOWN -> {
-                    startX = event.rawX
-                    startY = event.rawY
-                    startTime = System.currentTimeMillis()
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    val dx = event.rawX - startX
-                    val dy = event.rawY - startY
-                    val duration = System.currentTimeMillis() - startTime
-
-                    if (dy > 30 && !isExpanded) {
-                        // Swipe down -> Expand
-                        performHaptic()
-                        expandCurrentState()
-                        true
-                    } else if (dy < -30 && isExpanded) {
-                        // Swipe up -> Collapse
-                        performHaptic()
-                        collapseToCompact()
-                        true
-                    } else if (abs(dx) > 50 && abs(dy) < 40 && currentState == NotchState.MUSIC && !isExpanded) {
-                        // Horizontal swipe on compact music -> Next/Prev track
-                        performHaptic()
-                        if (dx > 0) {
-                            if (isRealMediaActive) NusaNotificationListener.skipPrev()
-                            else skipPrevFallback()
-                        } else {
-                            if (isRealMediaActive) NusaNotificationListener.skipNext()
-                            else skipNextFallback()
-                        }
-                        true
-                    } else if (abs(dx) < 60 && abs(dy) < 60 && duration < 600) {
-                        // Tap on Notch
-                        performHaptic()
-                        if (!isExpanded) {
-                            if (currentState == NotchState.NOTIFICATION && currentNotifPendingIntent != null) {
-                                try {
-                                    currentNotifPendingIntent?.send()
-                                    collapseToCompact()
-                                } catch (e: Exception) {
-                                    expandCurrentState()
-                                }
-                            } else {
-                                expandCurrentState()
-                            }
-                        }
-                        true
-                    } else {
-                        false
-                    }
-                }
-                else -> false
+                true
+            } else {
+                false
             }
         }
 
@@ -577,11 +547,105 @@ object DynamicNotchViewManager {
             }
         }
 
-        // Direct click on card
-        notchCard?.setOnClickListener {
-            performHaptic()
-            if (!isExpanded) {
-                expandCurrentState()
+        // Unified Direct Touch & Gesture Listener directly on notchCard
+        notchCard?.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.rawX
+                    startY = event.rawY
+                    startTime = System.currentTimeMillis()
+                    isDownOnCard = true
+                    notchCard?.animate()?.scaleX(0.96f)?.scaleY(0.96f)?.setDuration(90)?.start()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    isDownOnCard = false
+                    notchCard?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(120)?.start()
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    notchCard?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(140)?.start()
+                    if (!isDownOnCard) return@setOnTouchListener true
+                    isDownOnCard = false
+
+                    val dx = event.rawX - startX
+                    val dy = event.rawY - startY
+                    val duration = System.currentTimeMillis() - startTime
+                    val absDx = abs(dx)
+                    val absDy = abs(dy)
+
+                    if (!isExpanded) {
+                        // --- COMPACT GESTURES ---
+                        if (absDx > 35 && absDx > absDy * 1.2f) {
+                            // Horizontal Swipe on compact notch
+                            performHaptic()
+                            if (currentState == NotchState.MUSIC) {
+                                if (dx < 0) {
+                                    // Swipe Left -> Next Track
+                                    if (isRealMediaActive) NusaNotificationListener.skipNext()
+                                    else skipNextFallback()
+                                } else {
+                                    // Swipe Right -> Previous Track
+                                    if (isRealMediaActive) NusaNotificationListener.skipPrev()
+                                    else skipPrevFallback()
+                                }
+                            } else {
+                                winkBothEyes()
+                            }
+                            true
+                        } else if (dy > 25 && dy > absDx) {
+                            // Swipe Down -> Expand
+                            performHaptic()
+                            expandCurrentState()
+                            true
+                        } else if (absDx < 30 && absDy < 30 && duration < 600) {
+                            // Direct Tap on Notch
+                            performHaptic()
+                            if (currentState == NotchState.NOTIFICATION && currentNotifPendingIntent != null) {
+                                try {
+                                    currentNotifPendingIntent?.send()
+                                    collapseToCompact()
+                                } catch (e: Exception) {
+                                    expandCurrentState()
+                                }
+                            } else if (currentState == NotchState.PET) {
+                                winkBothEyes()
+                                // If real media is active or paused, expand music
+                                if (isRealMediaActive) {
+                                    expandCurrentState()
+                                }
+                            } else {
+                                expandCurrentState()
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        // --- EXPANDED GESTURES ---
+                        if (dy < -30 && absDy > absDx) {
+                            // Swipe Up on expanded card -> Collapse
+                            performHaptic()
+                            collapseToCompact()
+                            true
+                        } else if (currentState == NotchState.NOTIFICATION && absDx < 30 && absDy < 30 && duration < 600) {
+                            // Tap on notification card opens app
+                            if (currentNotifPendingIntent != null) {
+                                try {
+                                    currentNotifPendingIntent?.send()
+                                    collapseToCompact()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                            true
+                        } else {
+                            // Allow children (buttons, seekbars) to handle clicks
+                            false
+                        }
+                    }
+                }
+                else -> false
             }
         }
     }
@@ -971,9 +1035,11 @@ object DynamicNotchViewManager {
                 tvBubbleIcon?.text = "⏱️"
             }
             NotchState.NOTIFICATION -> {
-                collapseToCompact()
-                showCompact(compactNotification)
+                showExpanded(layerNotification)
+                expandCurrentState()
                 detachedBubble?.visibility = View.GONE
+                mainHandler.removeCallbacks(dismissNotifRunnable)
+                mainHandler.postDelayed(dismissNotifRunnable, 4500)
             }
             NotchState.RINGER -> {
                 collapseToCompact()

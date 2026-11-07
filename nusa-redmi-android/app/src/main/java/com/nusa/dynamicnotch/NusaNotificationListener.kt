@@ -158,23 +158,69 @@ class NusaNotificationListener : NotificationListenerService() {
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
 
-        // Check if media session notification
+        // Skip media session notifications (handled via MediaSessionManager)
         if (notification.category == Notification.CATEGORY_TRANSPORT ||
             extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) {
-            // Handled via MediaSessionManager
             return
         }
 
-        val title = extras.getString(Notification.EXTRA_TITLE)
-            ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-            ?: return
+        // Skip ongoing background services (downloads, sync, etc.) unless it's an incoming call
+        val isOngoing = (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
+        if (isOngoing && notification.category != Notification.CATEGORY_CALL) {
+            return
+        }
 
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+        var title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
             ?: ""
 
-        // Filter out empty or progress-only notifications
-        if (title.isEmpty() || text.isEmpty()) return
+        var text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+            ?: ""
+
+        // Support MessagingStyle (Telegram, Zalo, Messenger, WhatsApp)
+        if (text.isEmpty()) {
+            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (!messages.isNullOrEmpty()) {
+                val lastMsg = messages.last() as? android.os.Bundle
+                if (lastMsg != null) {
+                    val msgText = lastMsg.getCharSequence("text")?.toString() ?: ""
+                    val msgSender = lastMsg.getCharSequence("sender")?.toString() ?: ""
+                    if (msgText.isNotEmpty()) {
+                        text = msgText
+                        if (title.isEmpty() && msgSender.isNotEmpty()) {
+                            title = msgSender
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback to inbox lines
+        if (text.isEmpty()) {
+            val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            if (!lines.isNullOrEmpty()) {
+                text = lines.last().toString()
+            }
+        }
+
+        // Fallback to ticker text
+        if (text.isEmpty() && notification.tickerText != null) {
+            text = notification.tickerText.toString()
+        }
+
+        // Fallback to app name if title is empty
+        if (title.isEmpty()) {
+            title = try {
+                val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                sbn.packageName
+            }
+        }
+
+        if (title.isEmpty() && text.isEmpty()) return
 
         var iconBitmap: Bitmap? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -184,10 +230,22 @@ class NusaNotificationListener : NotificationListenerService() {
                     val drawable = largeIcon.loadDrawable(this)
                     if (drawable is BitmapDrawable) {
                         iconBitmap = drawable.bitmap
+                    } else if (drawable != null) {
+                        iconBitmap = drawableToBitmap(drawable)
                     }
                 } catch (e: Exception) {
                     // ignore
                 }
+            }
+        }
+
+        // Fallback: extract real app icon if largeIcon is not provided
+        if (iconBitmap == null) {
+            try {
+                val appDrawable = packageManager.getApplicationIcon(sbn.packageName)
+                iconBitmap = drawableToBitmap(appDrawable)
+            } catch (e: Exception) {
+                // ignore
             }
         }
 
@@ -200,6 +258,19 @@ class NusaNotificationListener : NotificationListenerService() {
             largeIcon = iconBitmap,
             pendingIntent = pendingIntent
         )
+    }
+
+    private fun drawableToBitmap(drawable: android.graphics.drawable.Drawable): Bitmap {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            return drawable.bitmap
+        }
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 96
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 96
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {

@@ -260,6 +260,20 @@ class NusaOverlayService : LifecycleService() {
         mainHandler.postDelayed(blinkRunnable, 2000)
     }
 
+    private fun registerReceivers() {
+        val filter = IntentFilter().apply {
+            addAction(ACTION_SET_STATE)
+            addAction(ACTION_UPDATE_EVENT)
+            addAction(ACTION_UPDATE_CONFIG)
+            addAction(Intent.ACTION_POWER_CONNECTED)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(eventReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(eventReceiver, filter)
+        }
+    }
+
     private fun startForegroundNotification() {
         val channelId = "nusa_overlay_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

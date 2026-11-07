@@ -127,8 +127,12 @@ class NusaNotificationListener : NotificationListenerService() {
         val metadata = controller.metadata
         val pbState = controller.playbackState
 
-        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: ""
-        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
+        var title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
+            ?: metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
+            ?: ""
+        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
+            ?: metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
+            ?: ""
         val duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val position = pbState?.position ?: 0L
         val isPlaying = pbState?.state == PlaybackState.STATE_PLAYING
@@ -137,17 +141,24 @@ class NusaNotificationListener : NotificationListenerService() {
             ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
 
-        if (title.isNotEmpty()) {
-            DynamicNotchViewManager.onMediaUpdated(
-                title = title,
-                artist = artist,
-                albumArt = artBitmap,
-                durationMs = duration,
-                positionMs = position,
-                isPlaying = isPlaying,
-                packageName = controller.packageName
-            )
+        if (title.isEmpty()) {
+            title = try {
+                val appInfo = packageManager.getApplicationInfo(controller.packageName, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: Exception) {
+                "Đang phát âm thanh"
+            }
         }
+
+        DynamicNotchViewManager.onMediaUpdated(
+            title = title,
+            artist = artist,
+            albumArt = artBitmap,
+            durationMs = duration,
+            positionMs = position,
+            isPlaying = isPlaying,
+            packageName = controller.packageName
+        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -158,9 +169,90 @@ class NusaNotificationListener : NotificationListenerService() {
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
 
-        // Skip media session notifications (handled via MediaSessionManager)
-        if (notification.category == Notification.CATEGORY_TRANSPORT ||
-            extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) {
+        // Intercept Media Notifications & sync directly with Dynamic Island
+        val isMediaSession = notification.category == Notification.CATEGORY_TRANSPORT ||
+                extras.containsKey(Notification.EXTRA_MEDIA_SESSION)
+
+        if (isMediaSession) {
+            val token = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                extras.getParcelable(Notification.EXTRA_MEDIA_SESSION, android.media.session.MediaSession.Token::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                extras.getParcelable(Notification.EXTRA_MEDIA_SESSION)
+            }
+            if (token != null) {
+                try {
+                    val controller = MediaController(this, token)
+                    bindMediaController(controller)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            var mediaTitle = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
+                ?: ""
+            var mediaArtist = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+                ?: ""
+
+            if (mediaTitle.isEmpty()) {
+                mediaTitle = activeMediaController?.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
+                    ?: activeMediaController?.metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
+                    ?: ""
+            }
+            if (mediaArtist.isEmpty()) {
+                mediaArtist = activeMediaController?.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                    ?: activeMediaController?.metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
+                    ?: ""
+            }
+            if (mediaTitle.isEmpty()) {
+                mediaTitle = try {
+                    val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
+                    packageManager.getApplicationLabel(appInfo).toString()
+                } catch (e: Exception) {
+                    "Đang phát âm thanh"
+                }
+            }
+
+            var artBitmap: Bitmap? = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val largeIcon = notification.getLargeIcon()
+                if (largeIcon != null) {
+                    try {
+                        val drawable = largeIcon.loadDrawable(this)
+                        if (drawable is BitmapDrawable) {
+                            artBitmap = drawable.bitmap
+                        } else if (drawable != null) {
+                            artBitmap = drawableToBitmap(drawable)
+                        }
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            }
+            if (artBitmap == null) {
+                artBitmap = activeMediaController?.metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                    ?: activeMediaController?.metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+                    ?: activeMediaController?.metadata?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
+            }
+
+            val pbState = activeMediaController?.playbackState
+            val isPlaying = pbState?.state == PlaybackState.STATE_PLAYING ||
+                (notification.actions?.any { action ->
+                    action.title?.toString()?.contains("pause", ignoreCase = true) == true ||
+                    action.title?.toString()?.contains("tạm dừng", ignoreCase = true) == true
+                } ?: true)
+
+            DynamicNotchViewManager.onMediaUpdated(
+                title = mediaTitle,
+                artist = mediaArtist,
+                albumArt = artBitmap,
+                durationMs = activeMediaController?.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
+                positionMs = pbState?.position ?: 0L,
+                isPlaying = isPlaying,
+                packageName = sbn.packageName
+            )
             return
         }
 
@@ -275,5 +367,11 @@ class NusaNotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
+        sbn ?: return
+        val isMedia = sbn.notification?.category == Notification.CATEGORY_TRANSPORT ||
+                sbn.notification?.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true
+        if (isMedia || sbn.packageName == activeMediaController?.packageName) {
+            DynamicNotchViewManager.onMediaStopped()
+        }
     }
 }

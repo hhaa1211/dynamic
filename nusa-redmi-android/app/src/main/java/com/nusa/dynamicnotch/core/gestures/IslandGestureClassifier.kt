@@ -52,6 +52,9 @@ object IslandGestureClassifier {
             if (dy < -VERTICAL_SWIPE_MIN_DY && absDy > absDx) {
                 return IslandGesture.SWIPE_UP
             }
+            if (absDx > HORIZONTAL_SWIPE_MIN_DX && absDx > absDy * 1.2f) {
+                return if (dx < 0) IslandGesture.SWIPE_LEFT else IslandGesture.SWIPE_RIGHT
+            }
             if (absDx < CLICK_MAX_DISPLACEMENT && absDy < CLICK_MAX_DISPLACEMENT && durationMs < LONG_PRESS_MIN_DURATION_MS) {
                 return IslandGesture.TAP
             }

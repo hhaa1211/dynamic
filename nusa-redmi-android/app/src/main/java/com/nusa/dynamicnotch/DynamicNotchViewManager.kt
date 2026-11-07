@@ -12,7 +12,9 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.AudioPlaybackConfiguration
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
@@ -177,12 +179,22 @@ object DynamicNotchViewManager {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isRealMediaActive = false
     private var activeMediaPackage: String? = null
-    private var isPlaying = true
-    private var progressValue = 125
-    private var totalDuration = 220
+    private var isPlaying = false
+    private var progressValue = 0
+    private var totalDuration = 0
     private var pomoSeconds = 25 * 60
     private var isPomoRunning = true
     private var callSeconds = 42
+
+    private var audioManager: AudioManager? = null
+    private var audioPlaybackCallback: AudioManager.AudioPlaybackCallback? = null
+    private var isSystemAudioActive = false
+    private val systemAudioStopRunnable = Runnable {
+        if (!isRealMediaActive && currentState == NotchState.MUSIC) {
+            if (isExpanded) collapseToCompact()
+            setNotchState(NotchState.PET)
+        }
+    }
 
     private val pauseTimeoutRunnable = Runnable {
         if (currentState == NotchState.MUSIC && !isPlaying && !isExpanded) {
@@ -215,13 +227,13 @@ object DynamicNotchViewManager {
 
     private val progressRunnable = object : Runnable {
         override fun run() {
-            if (isPlaying && !isRealMediaActive) {
+            if (isPlaying && totalDuration > 0) {
                 progressValue++
-                if (progressValue > totalDuration) progressValue = 0
+                if (progressValue > totalDuration) progressValue = totalDuration
                 musicProgressBar?.progress = progressValue
                 val curMin = progressValue / 60
                 val curSec = progressValue % 60
-                val remTotal = totalDuration - progressValue
+                val remTotal = maxOf(0, totalDuration - progressValue)
                 val remMin = remTotal / 60
                 val remSec = remTotal % 60
                 tvTimeCurrent?.text = String.format("%d:%02d", curMin, curSec)
@@ -265,7 +277,7 @@ object DynamicNotchViewManager {
         private var frame = 0
 
         override fun run() {
-            if ((compactMusic?.visibility == View.VISIBLE || isMinimalMode) && isPlaying) {
+            if ((compactMusic?.visibility == View.VISIBLE || isMinimalMode) && (isPlaying || isSystemAudioActive)) {
                 val currentFrame = heights[frame % heights.size]
                 val bars = listOf(eqBar1, eqBar2, eqBar3, eqBar4)
                 bars.forEachIndexed { i, bar ->
@@ -284,12 +296,17 @@ object DynamicNotchViewManager {
     private val blinkRunnable = object : Runnable {
         override fun run() {
             if (currentState == NotchState.PET && !isExpanded) {
-                leftEye?.animate()?.scaleY(0.1f)?.setDuration(120)?.withEndAction {
+                leftEye?.animate()?.cancel()
+                rightEye?.animate()?.cancel()
+                leftEye?.animate()?.scaleY(0.1f)?.setDuration(110)?.withEndAction {
                     leftEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
                 }?.start()
-                rightEye?.animate()?.scaleY(0.1f)?.setDuration(120)?.withEndAction {
+                rightEye?.animate()?.scaleY(0.1f)?.setDuration(110)?.withEndAction {
                     rightEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
                 }?.start()
+            } else {
+                leftEye?.scaleY = 1.0f
+                rightEye?.scaleY = 1.0f
             }
             val nextDelay = (2500..5000).random().toLong()
             mainHandler.postDelayed(this, nextDelay)
@@ -302,17 +319,21 @@ object DynamicNotchViewManager {
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == BatteryManager.BATTERY_STATUS_FULL
                     val pct = if (scale > 0) (level * 100) / scale else level
 
                     tvCompactChargePercent?.text = "$pct%"
                     tvChargePercentage?.text = "$pct%"
-
-                    if (isCharging && currentState != NotchState.CHARGING) {
-                        performHaptic()
-                        setNotchState(NotchState.CHARGING)
+                    // Note: Never trigger setNotchState(NotchState.CHARGING) from ACTION_BATTERY_CHANGED
+                    // to prevent endless auto-reopening loops. Real charging starts via ACTION_POWER_CONNECTED.
+                }
+                Intent.ACTION_POWER_CONNECTED -> {
+                    performHaptic(NusaHapticEngine.FeedbackType.MEDIUM_CLICK)
+                    setNotchState(NotchState.CHARGING)
+                }
+                Intent.ACTION_POWER_DISCONNECTED -> {
+                    if (currentState == NotchState.CHARGING) {
+                        mainHandler.removeCallbacks(dismissChargeRunnable)
+                        priorityManager.dismissTransient(NotchState.CHARGING)
                     }
                 }
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> {
@@ -507,6 +528,7 @@ object DynamicNotchViewManager {
         }
 
         registerSystemReceivers(context)
+        initAudioMonitoring(context)
 
         mainHandler.post(progressRunnable)
         mainHandler.post(pomoRunnable)
@@ -519,6 +541,7 @@ object DynamicNotchViewManager {
         if (!isAttached) return
         try {
             unregisterSystemReceivers()
+            stopAudioMonitoring()
             mainHandler.removeCallbacksAndMessages(null)
             overlayView?.let { windowManager?.removeView(it) }
         } catch (e: Exception) {
@@ -538,9 +561,73 @@ object DynamicNotchViewManager {
         }
     }
 
+    private fun initAudioMonitoring(context: Context) {
+        audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioPlaybackCallback = object : AudioManager.AudioPlaybackCallback() {
+                override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
+                    super.onPlaybackConfigChanged(configs)
+                    val activeMedia = configs?.any { config ->
+                        config.isActive && (
+                            config.audioAttributes.usage == AudioAttributes.USAGE_MEDIA ||
+                            config.audioAttributes.usage == AudioAttributes.USAGE_GAME
+                        )
+                    } ?: false
+
+                    onSystemAudioPlaybackChanged(activeMedia)
+                }
+            }
+            try {
+                audioPlaybackCallback?.let {
+                    audioManager?.registerAudioPlaybackCallback(it, mainHandler)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun stopAudioMonitoring() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioPlaybackCallback != null) {
+            try {
+                audioManager?.unregisterAudioPlaybackCallback(audioPlaybackCallback!!)
+            } catch (e: Exception) {
+                // ignore
+            }
+            audioPlaybackCallback = null
+        }
+        audioManager = null
+    }
+
+    private fun onSystemAudioPlaybackChanged(active: Boolean) {
+        isSystemAudioActive = active
+        if (active) {
+            mainHandler.removeCallbacks(systemAudioStopRunnable)
+            if (!isRealMediaActive && currentState != NotchState.MUSIC && !isExpanded) {
+                tvMusicTitle?.text = "Đang phát âm thanh"
+                tvMusicArtist?.text = "Media • Loa ngoài"
+                tvOutputRoute?.text = "🔊 Âm thanh hệ thống • Loa ngoài"
+                btnPlayPause?.text = "⏸"
+                cardCompactMusicArt?.visibility = View.GONE
+                compactMusicIcon?.visibility = View.VISIBLE
+                ivMusicArtLarge?.visibility = View.GONE
+                tvMusicArt?.visibility = View.VISIBLE
+                isPlaying = true
+                setNotchState(NotchState.MUSIC)
+            }
+        } else {
+            if (!isRealMediaActive && currentState == NotchState.MUSIC) {
+                mainHandler.removeCallbacks(systemAudioStopRunnable)
+                mainHandler.postDelayed(systemAudioStopRunnable, 2000)
+            }
+        }
+    }
+
     private fun registerSystemReceivers(context: Context) {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_CHANGED)
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
@@ -563,6 +650,9 @@ object DynamicNotchViewManager {
     }
 
     private fun winkBothEyes() {
+        leftEye?.animate()?.cancel()
+        rightEye?.animate()?.cancel()
+        notchCard?.animate()?.cancel()
         leftEye?.animate()?.scaleY(0.1f)?.setDuration(100)?.withEndAction {
             leftEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
         }?.start()
@@ -570,14 +660,14 @@ object DynamicNotchViewManager {
             rightEye?.animate()?.scaleY(1f)?.setDuration(120)?.start()
         }?.start()
         notchCard?.animate()
-            ?.scaleX(1.1f)
+            ?.scaleX(1.08f)
             ?.scaleY(0.92f)
-            ?.setDuration(110)
+            ?.setDuration(100)
             ?.withEndAction {
                 notchCard?.animate()
                     ?.scaleX(1f)
                     ?.scaleY(1f)
-                    ?.setDuration(150)
+                    ?.setDuration(140)
                     ?.start()
             }
             ?.start()
@@ -717,7 +807,7 @@ object DynamicNotchViewManager {
                                     }
                                 } else if (currentState == NotchState.PET) {
                                     winkBothEyes()
-                                    if (isRealMediaActive) {
+                                    if (isRealMediaActive || isSystemAudioActive) {
                                         setNotchState(NotchState.MUSIC)
                                     }
                                 } else if (currentState == NotchState.MUSIC && !activeMediaPackage.isNullOrEmpty()) {
@@ -983,10 +1073,10 @@ object DynamicNotchViewManager {
     }
 
     private fun updateMusicDisplay() {
-        val (title, artist) = songs[currentSongIdx]
-        tvMusicTitle?.text = title
-        tvMusicArtist?.text = artist
-        tvOutputRoute?.text = "🎧 Redmi Note 13 Pro • Loa ngoài"
+        if (isRealMediaActive) return
+        tvMusicTitle?.text = "Chưa phát phương tiện"
+        tvMusicArtist?.text = "Mở Spotify, TikTok, YouTube để đồng bộ"
+        tvOutputRoute?.text = "🎧 Redmi Note 13 Pro • Sẵn sàng"
     }
 
     fun onMediaUpdated(
@@ -1004,7 +1094,7 @@ object DynamicNotchViewManager {
             this.isPlaying = isPlaying
 
             tvMusicTitle?.text = title
-            tvMusicArtist?.text = artist
+            tvMusicArtist?.text = if (artist.isNotEmpty()) artist else getAppLabel(packageName)
             btnPlayPause?.text = if (isPlaying) "⏸" else "▶"
 
             if (albumArt != null) {
@@ -1060,7 +1150,22 @@ object DynamicNotchViewManager {
                 }
             } else {
                 mainHandler.removeCallbacks(pauseTimeoutRunnable)
-                mainHandler.postDelayed(pauseTimeoutRunnable, 15000)
+                mainHandler.postDelayed(pauseTimeoutRunnable, 3500)
+            }
+        }
+    }
+
+    fun onMediaStopped() {
+        mainHandler.post {
+            isRealMediaActive = false
+            isPlaying = false
+            activeMediaPackage = null
+            mainHandler.removeCallbacks(pauseTimeoutRunnable)
+            if (currentState == NotchState.MUSIC) {
+                if (isExpanded) {
+                    collapseToCompact()
+                }
+                setNotchState(NotchState.PET)
             }
         }
     }
@@ -1194,6 +1299,17 @@ object DynamicNotchViewManager {
     }
 
     private fun showCompact(activeCompact: View?) {
+        if (activeCompact == compactPet) {
+            leftEye?.animate()?.cancel()
+            rightEye?.animate()?.cancel()
+            leftEye?.scaleY = 1.0f
+            leftEye?.scaleX = 1.0f
+            rightEye?.scaleY = 1.0f
+            rightEye?.scaleX = 1.0f
+            notchCard?.animate()?.cancel()
+            notchCard?.scaleX = 1.0f
+            notchCard?.scaleY = 1.0f
+        }
         listOf(
             compactPet,
             compactMusic,
@@ -1231,7 +1347,16 @@ object DynamicNotchViewManager {
         isExpanded = true
         when (currentState) {
             NotchState.PET -> {
-                showExpanded(layerMusic)
+                if (isRealMediaActive || isSystemAudioActive) {
+                    showExpanded(layerMusic)
+                } else if (isPomoRunning) {
+                    showExpanded(layerPomo)
+                } else {
+                    tvMusicTitle?.text = "Redmi Note 13 Pro 5G"
+                    tvMusicArtist?.text = "Nusa Dynamic Island • Sẵn sàng"
+                    tvOutputRoute?.text = "✨ Trạng thái nghỉ ngơi"
+                    showExpanded(layerMusic)
+                }
             }
             NotchState.MUSIC, NotchState.MINIMAL -> {
                 showExpanded(layerMusic)

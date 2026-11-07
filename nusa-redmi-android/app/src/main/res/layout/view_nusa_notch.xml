@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/notchContainer"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:clickable="true"
-    android:focusable="true"
-    android:gravity="center"
-    android:orientation="horizontal">
+    android:focusable="true">
 
     <!-- Primary Dynamic Island Card -->
     <androidx.cardview.widget.CardView
         android:id="@+id/notchCard"
         android:layout_width="138dp"
         android:layout_height="46dp"
+        android:layout_gravity="center_horizontal"
         app:cardBackgroundColor="@color/notch_background"
         app:cardCornerRadius="23dp"
         app:cardElevation="12dp">
@@ -728,7 +727,8 @@
         android:id="@+id/detachedBubble"
         android:layout_width="44dp"
         android:layout_height="44dp"
-        android:layout_marginStart="8dp"
+        android:layout_gravity="center_horizontal"
+        android:translationX="114dp"
         android:visibility="gone"
         app:cardBackgroundColor="@color/notch_background"
         app:cardCornerRadius="22dp"
@@ -748,4 +748,4 @@
         </FrameLayout>
     </androidx.cardview.widget.CardView>
 
-</LinearLayout>
+</FrameLayout>

@@ -509,7 +509,7 @@ class NusaOverlayService : LifecycleService() {
 
         if (isMinimalMode) {
             detachedBubble.visibility = View.VISIBLE
-            params.width = dpToPx(targetWidth + 8 + 44 + 24)
+            params.width = dpToPx(300)
         } else {
             detachedBubble.visibility = View.GONE
             params.width = dpToPx(maxOf(targetWidth + 24, 180))

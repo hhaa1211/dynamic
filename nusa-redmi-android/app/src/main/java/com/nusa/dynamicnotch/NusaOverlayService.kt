@@ -37,12 +37,12 @@ class NusaOverlayService : LifecycleService() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // Redmi Note 13 Pro 5G Dimensions (calibrated)
-    private var collapsedWidthDp = 116
-    private var collapsedHeightDp = 34
-    private var yOffsetDp = 6
-    private var eyeSpacingDp = 60
+    private var collapsedWidthDp = 136
+    private var collapsedHeightDp = 42
+    private var yOffsetDp = 4
+    private var eyeSpacingDp = 72
     private var eyeYOffsetDp = 0
-    private var eyeSizeDp = 9
+    private var eyeSizeDp = 10
     private var expandedWidthDp = 350
     private var expandedHeightDp = 175
 
@@ -179,12 +179,12 @@ class NusaOverlayService : LifecycleService() {
 
         // Read user preferences
         val prefs = getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
-        yOffsetDp = prefs.getInt("y_offset", 6)
-        collapsedWidthDp = prefs.getInt("notch_width", 116)
-        collapsedHeightDp = prefs.getInt("notch_height", 34)
-        eyeSpacingDp = prefs.getInt("eye_spacing", 60)
+        yOffsetDp = prefs.getInt("y_offset", 4)
+        collapsedWidthDp = prefs.getInt("notch_width", 136)
+        collapsedHeightDp = prefs.getInt("notch_height", 42)
+        eyeSpacingDp = prefs.getInt("eye_spacing", 72)
         eyeYOffsetDp = prefs.getInt("eye_y_offset", 0)
-        eyeSizeDp = prefs.getInt("eye_size", 9)
+        eyeSizeDp = prefs.getInt("eye_size", 10)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -194,8 +194,8 @@ class NusaOverlayService : LifecycleService() {
         }
 
         // Window height extends past the 122px HyperOS status bar boundary to guarantee touch delivery
-        val initialW = dpToPx(maxOf(collapsedWidthDp + 20, 136))
-        val initialH = dpToPx(maxOf(collapsedHeightDp + 16, 50))
+        val initialW = dpToPx(maxOf(collapsedWidthDp + 24, 160))
+        val initialH = dpToPx(maxOf(collapsedHeightDp + 24, 66))
 
         params = WindowManager.LayoutParams(
             initialW,
@@ -205,36 +205,81 @@ class NusaOverlayService : LifecycleService() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
             y = dpToPx(yOffsetDp)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
         }
 
         applyEyeAndNotchConfig()
         showLayer(layerPet)
 
-        // Click or tap on Notch toggles expand / collapse
-        val toggleListener = View.OnClickListener {
-            if (isExpanded) {
-                setNotchState(NotchState.PET)
+        // Gesture detector for smooth tap and swipe interactions
+        val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = true
+
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                if (!isExpanded) {
+                    setNotchState(NotchState.MUSIC)
+                    return true
+                }
+                return false
+            }
+
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                if (!isExpanded) {
+                    setNotchState(NotchState.MUSIC)
+                    return true
+                }
+                return false
+            }
+
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 != null) {
+                    val dy = e2.y - e1.y
+                    if (dy > 25 && !isExpanded) {
+                        setNotchState(NotchState.MUSIC)
+                        return true
+                    } else if (dy < -25 && isExpanded) {
+                        setNotchState(NotchState.PET)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+
+        // Tap outside collapses when expanded; otherwise route through gesture detector
+        overlayView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                if (isExpanded) {
+                    setNotchState(NotchState.PET)
+                }
+                return@setOnTouchListener true
+            }
+
+            if (!isExpanded) {
+                return@setOnTouchListener gestureDetector.onTouchEvent(event)
             } else {
-                setNotchState(NotchState.MUSIC)
+                gestureDetector.onTouchEvent(event)
+                return@setOnTouchListener false
             }
         }
-        overlayView.setOnClickListener(toggleListener)
-        notchCard.setOnClickListener(toggleListener)
-        layerPet.setOnClickListener(toggleListener)
 
-        // Instant expand on ACTION_DOWN so touch feels instantaneous
-        overlayView.setOnTouchListener { _, event ->
-            if (!isExpanded && (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP)) {
+        notchCard.setOnClickListener {
+            if (!isExpanded) {
                 setNotchState(NotchState.MUSIC)
-                true
-            } else {
-                false
             }
         }
 
@@ -275,8 +320,8 @@ class NusaOverlayService : LifecycleService() {
             notchCard.radius = dpToPx(collapsedHeightDp / 2).toFloat()
 
             // Extended hit box guarantees touch events bypass HyperOS status bar gesture interceptor
-            params.width = dpToPx(maxOf(collapsedWidthDp + 20, 136))
-            params.height = dpToPx(maxOf(collapsedHeightDp + 16, 50))
+            params.width = dpToPx(maxOf(collapsedWidthDp + 24, 160))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 24, 66))
         }
 
         try {
@@ -399,8 +444,8 @@ class NusaOverlayService : LifecycleService() {
             dpToPx(28), dpToPx(collapsedHeightDp / 2)
         ) {
             // Shrink window back to hit box bounds on animation end
-            params.width = dpToPx(maxOf(collapsedWidthDp + 20, 136))
-            params.height = dpToPx(maxOf(collapsedHeightDp + 16, 50))
+            params.width = dpToPx(maxOf(collapsedWidthDp + 24, 160))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 24, 66))
             try {
                 windowManager.updateViewLayout(overlayView, params)
             } catch (e: Exception) {

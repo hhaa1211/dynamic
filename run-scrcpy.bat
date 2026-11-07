@@ -6,7 +6,7 @@ echo Dang ket noi man hinh Redmi Note 13 Pro 5G...
 echo ========================================================
 adb.exe devices
 echo.
-scrcpy.exe --no-audio --always-on-top --window-width=420
+scrcpy.exe --no-audio --always-on-top --window-title "Redmi Note 13 Pro 5G - Nusa" --window-width 420
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [Loi] Scrcpy dung lai voi ma loi %ERRORLEVEL%.

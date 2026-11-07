@@ -48,6 +48,9 @@ class MainActivity : AppCompatActivity() {
         setupListeners()
         updatePermissionButtons()
 
+        if (Settings.canDrawOverlays(this)) {
+            startOverlayService()
+        }
         // Apply config on start
         sendConfigBroadcast()
     }

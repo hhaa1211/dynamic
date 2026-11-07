@@ -210,12 +210,24 @@ class NusaOverlayService : LifecycleService() {
         applyEyeAndNotchConfig()
         showLayer(layerPet)
 
-        // Click on Notch toggles expand / collapse
-        notchCard.setOnClickListener {
+        // Click or tap on Notch toggles expand / collapse
+        val toggleListener = View.OnClickListener {
             if (isExpanded) {
                 setNotchState(NotchState.PET)
             } else {
                 setNotchState(NotchState.MUSIC)
+            }
+        }
+        overlayView.setOnClickListener(toggleListener)
+        notchCard.setOnClickListener(toggleListener)
+        layerPet.setOnClickListener(toggleListener)
+
+        overlayView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP && !isExpanded) {
+                setNotchState(NotchState.MUSIC)
+                true
+            } else {
+                false
             }
         }
 

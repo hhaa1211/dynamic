@@ -86,12 +86,64 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
+                <!-- Fast Presets for Redmi Note 13 Pro 5G -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CÁC BỘ CĂN CHỈNH SẴN CHO REDMI"
+                    android:textColor="@color/cyan_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnPresetRedmi"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="🎯 Né chuẩn"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/btnPresetWide"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="🐾 Mắt to"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/btnPresetBelow"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:text="👀 Dưới cam"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
                 <!-- 1. Eye Spacing (Gap around camera) -->
                 <TextView
                     android:id="@+id/tvEyeSpacingLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Khoảng cách 2 mắt né camera: 34dp"
+                    android:text="Khoảng cách 2 mắt né camera: 60dp"
                     android:textColor="@color/green_charging"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -101,12 +153,52 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:max="60"
-                    android:progress="34"
+                    android:max="100"
+                    android:progress="60"
                     android:progressTint="@color/green_charging"
                     android:thumbTint="@color/green_charging" />
 
-                <!-- 2. Y-Offset -->
+                <!-- 2. Eye Y-Offset (Up / Down) -->
+                <TextView
+                    android:id="@+id/tvEyeYOffsetLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Vị trí mắt lên/xuống (Y-Offset): 0dp"
+                    android:textColor="@color/green_charging"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekEyeYOffset"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="40"
+                    android:progress="15"
+                    android:progressTint="@color/green_charging"
+                    android:thumbTint="@color/green_charging" />
+
+                <!-- 3. Eye Size -->
+                <TextView
+                    android:id="@+id/tvEyeSizeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Kích thước mắt: 9dp"
+                    android:textColor="@color/green_charging"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekEyeSize"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="12"
+                    android:progress="3"
+                    android:progressTint="@color/green_charging"
+                    android:thumbTint="@color/green_charging" />
+
+                <!-- 4. Y-Offset -->
                 <TextView
                     android:id="@+id/tvYOffsetLabel"
                     android:layout_width="wrap_content"
@@ -126,13 +218,13 @@
                     android:progressTint="@color/cyan_accent"
                     android:thumbTint="@color/cyan_accent" />
 
-                <!-- 3. Notch Width -->
+                <!-- 5. Notch Width -->
                 <TextView
                     android:id="@+id/tvWidthLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="Độ rộng viên thuốc: 110dp"
+                    android:text="Độ rộng viên thuốc: 116dp"
                     android:textColor="@color/ink_white"
                     android:textSize="13sp" />
 
@@ -141,18 +233,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:max="160"
-                    android:progress="110"
+                    android:max="180"
+                    android:progress="116"
                     android:progressTint="@color/cyan_accent"
                     android:thumbTint="@color/cyan_accent" />
 
-                <!-- 4. Notch Height -->
+                <!-- 6. Notch Height -->
                 <TextView
                     android:id="@+id/tvHeightLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="Chiều cao viên thuốc: 36dp"
+                    android:text="Chiều cao viên thuốc: 34dp"
                     android:textColor="@color/ink_white"
                     android:textSize="13sp" />
 
@@ -161,8 +253,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:max="50"
-                    android:progress="36"
+                    android:max="60"
+                    android:progress="34"
                     android:progressTint="@color/cyan_accent"
                     android:thumbTint="@color/cyan_accent" />
             </LinearLayout>

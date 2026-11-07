@@ -21,14 +21,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnGrantNotification: Button
 
     private lateinit var seekEyeSpacing: SeekBar
+    private lateinit var seekEyeYOffset: SeekBar
+    private lateinit var seekEyeSize: SeekBar
     private lateinit var seekYOffset: SeekBar
     private lateinit var seekNotchWidth: SeekBar
     private lateinit var seekNotchHeight: SeekBar
 
     private lateinit var tvEyeSpacingLabel: TextView
+    private lateinit var tvEyeYOffsetLabel: TextView
+    private lateinit var tvEyeSizeLabel: TextView
     private lateinit var tvYOffsetLabel: TextView
     private lateinit var tvWidthLabel: TextView
     private lateinit var tvHeightLabel: TextView
+
+    private lateinit var btnPresetRedmi: Button
+    private lateinit var btnPresetWide: Button
+    private lateinit var btnPresetBelow: Button
 
     private val prefs by lazy { getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE) }
 
@@ -39,6 +47,9 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         updatePermissionButtons()
+
+        // Apply config on start
+        sendConfigBroadcast()
     }
 
     override fun onResume() {
@@ -51,37 +62,50 @@ class MainActivity : AppCompatActivity() {
         btnGrantOverlay = findViewById(R.id.btnGrantOverlay)
         btnGrantNotification = findViewById(R.id.btnGrantNotification)
 
+        btnPresetRedmi = findViewById(R.id.btnPresetRedmi)
+        btnPresetWide = findViewById(R.id.btnPresetWide)
+        btnPresetBelow = findViewById(R.id.btnPresetBelow)
+
         seekEyeSpacing = findViewById(R.id.seekEyeSpacing)
+        seekEyeYOffset = findViewById(R.id.seekEyeYOffset)
+        seekEyeSize = findViewById(R.id.seekEyeSize)
         seekYOffset = findViewById(R.id.seekYOffset)
         seekNotchWidth = findViewById(R.id.seekNotchWidth)
         seekNotchHeight = findViewById(R.id.seekNotchHeight)
 
         tvEyeSpacingLabel = findViewById(R.id.tvEyeSpacingLabel)
+        tvEyeYOffsetLabel = findViewById(R.id.tvEyeYOffsetLabel)
+        tvEyeSizeLabel = findViewById(R.id.tvEyeSizeLabel)
         tvYOffsetLabel = findViewById(R.id.tvYOffsetLabel)
         tvWidthLabel = findViewById(R.id.tvWidthLabel)
         tvHeightLabel = findViewById(R.id.tvHeightLabel)
 
-        // Default calibrated values for Redmi Note 13 Pro 5G:
-        // Eye spacing: 34dp (leaves clear gap around 13dp center punch hole)
-        // Y-Offset: 6dp
-        // Width: 110dp
-        // Height: 36dp
-        val currentSpacing = prefs.getInt("eye_spacing", 34)
-        val currentY = prefs.getInt("y_offset", 6)
-        val currentW = prefs.getInt("notch_width", 110)
-        val currentH = prefs.getInt("notch_height", 36)
+        // Calibrated defaults for Redmi Note 13 Pro 5G (Punch hole centered ~14dp diameter)
+        val spacing = prefs.getInt("eye_spacing", 60)
+        val eyeY = prefs.getInt("eye_y_offset", 0) // range: -15 to +25 -> progress 0 to 40
+        val eyeSize = prefs.getInt("eye_size", 9)   // range: 6 to 18 -> progress 0 to 12
+        val yOffset = prefs.getInt("y_offset", 6)
+        val notchW = prefs.getInt("notch_width", 116)
+        val notchH = prefs.getInt("notch_height", 34)
 
-        seekEyeSpacing.progress = currentSpacing
-        seekYOffset.progress = currentY
-        seekNotchWidth.progress = currentW
-        seekNotchHeight.progress = currentH
+        seekEyeSpacing.progress = spacing
+        seekEyeYOffset.progress = eyeY + 15
+        seekEyeSize.progress = eyeSize - 6
+        seekYOffset.progress = yOffset
+        seekNotchWidth.progress = notchW
+        seekNotchHeight.progress = notchH
 
-        tvEyeSpacingLabel.text = "Khoảng cách 2 mắt né camera: ${currentSpacing}dp"
-        tvYOffsetLabel.text = "Vị trí từ mép trên (Y-Offset): ${currentY}dp"
-        tvWidthLabel.text = "Độ rộng viên thuốc: ${currentW}dp"
-        tvHeightLabel.text = "Chiều cao viên thuốc: ${currentH}dp"
-
+        updateLabels(spacing, eyeY, eyeSize, yOffset, notchW, notchH)
         switchEnable.isChecked = true
+    }
+
+    private fun updateLabels(spacing: Int, eyeY: Int, eyeSize: Int, yOffset: Int, notchW: Int, notchH: Int) {
+        tvEyeSpacingLabel.text = "Khoảng cách 2 mắt né camera: ${spacing}dp"
+        tvEyeYOffsetLabel.text = "Vị trí mắt lên/xuống (Y-Offset): ${eyeY}dp"
+        tvEyeSizeLabel.text = "Kích thước mắt: ${eyeSize}dp"
+        tvYOffsetLabel.text = "Vị trí từ mép trên (Y-Offset): ${yOffset}dp"
+        tvWidthLabel.text = "Độ rộng viên thuốc: ${notchW}dp"
+        tvHeightLabel.text = "Chiều cao viên thuốc: ${notchH}dp"
     }
 
     private fun setupListeners() {
@@ -107,17 +131,61 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
-        // Live Real-Time Calibration
+        // Fast Preset 1: Né camera chuẩn Redmi Note 13 Pro 5G
+        btnPresetRedmi.setOnClickListener {
+            applyPreset(spacing = 62, eyeY = 0, eyeSize = 9, yOffset = 6, notchW = 116, notchH = 34)
+            Toast.makeText(this, "Đã áp dụng: Né camera chuẩn Redmi Note 13 Pro 5G", Toast.LENGTH_SHORT).show()
+        }
+
+        // Fast Preset 2: Mắt to rõ né xa camera
+        btnPresetWide.setOnClickListener {
+            applyPreset(spacing = 74, eyeY = 0, eyeSize = 12, yOffset = 6, notchW = 132, notchH = 36)
+            Toast.makeText(this, "Đã áp dụng: Mắt to né xa camera", Toast.LENGTH_SHORT).show()
+        }
+
+        // Fast Preset 3: Đặt mắt nằm dưới nốt ruồi camera
+        btnPresetBelow.setOnClickListener {
+            applyPreset(spacing = 34, eyeY = 10, eyeSize = 9, yOffset = 4, notchW = 110, notchH = 44)
+            Toast.makeText(this, "Đã áp dụng: Mắt đặt phía dưới camera", Toast.LENGTH_SHORT).show()
+        }
+
+        // 1. Spacing SeekBar
         seekEyeSpacing.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                tvEyeSpacingLabel.text = "Khoảng cách 2 mắt né camera: ${progress}dp"
-                prefs.edit().putInt("eye_spacing", progress).apply()
+                val clamped = if (progress < 20) 20 else progress
+                tvEyeSpacingLabel.text = "Khoảng cách 2 mắt né camera: ${clamped}dp"
+                prefs.edit().putInt("eye_spacing", clamped).apply()
                 sendConfigBroadcast()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // 2. Eye Y Offset SeekBar
+        seekEyeYOffset.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val actualY = progress - 15 // Range: -15 to +25
+                tvEyeYOffsetLabel.text = "Vị trí mắt lên/xuống (Y-Offset): ${actualY}dp"
+                prefs.edit().putInt("eye_y_offset", actualY).apply()
+                sendConfigBroadcast()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // 3. Eye Size SeekBar
+        seekEyeSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val actualSize = progress + 6 // Range: 6 to 18
+                tvEyeSizeLabel.text = "Kích thước mắt: ${actualSize}dp"
+                prefs.edit().putInt("eye_size", actualSize).apply()
+                sendConfigBroadcast()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // 4. Y Offset SeekBar
         seekYOffset.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 tvYOffsetLabel.text = "Vị trí từ mép trên (Y-Offset): ${progress}dp"
@@ -128,20 +196,24 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // 5. Notch Width SeekBar
         seekNotchWidth.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                tvWidthLabel.text = "Độ rộng viên thuốc: ${progress}dp"
-                prefs.edit().putInt("notch_width", progress).apply()
+                val clamped = if (progress < 80) 80 else progress
+                tvWidthLabel.text = "Độ rộng viên thuốc: ${clamped}dp"
+                prefs.edit().putInt("notch_width", clamped).apply()
                 sendConfigBroadcast()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // 6. Notch Height SeekBar
         seekNotchHeight.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                tvHeightLabel.text = "Chiều cao viên thuốc: ${progress}dp"
-                prefs.edit().putInt("notch_height", progress).apply()
+                val clamped = if (progress < 24) 24 else progress
+                tvHeightLabel.text = "Chiều cao viên thuốc: ${clamped}dp"
+                prefs.edit().putInt("notch_height", clamped).apply()
                 sendConfigBroadcast()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -158,6 +230,28 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnTestCharge).setOnClickListener {
             sendStateBroadcast("CHARGING")
         }
+    }
+
+    private fun applyPreset(spacing: Int, eyeY: Int, eyeSize: Int, yOffset: Int, notchW: Int, notchH: Int) {
+        seekEyeSpacing.progress = spacing
+        seekEyeYOffset.progress = eyeY + 15
+        seekEyeSize.progress = eyeSize - 6
+        seekYOffset.progress = yOffset
+        seekNotchWidth.progress = notchW
+        seekNotchHeight.progress = notchH
+
+        updateLabels(spacing, eyeY, eyeSize, yOffset, notchW, notchH)
+
+        prefs.edit()
+            .putInt("eye_spacing", spacing)
+            .putInt("eye_y_offset", eyeY)
+            .putInt("eye_size", eyeSize)
+            .putInt("y_offset", yOffset)
+            .putInt("notch_width", notchW)
+            .putInt("notch_height", notchH)
+            .apply()
+
+        sendConfigBroadcast()
     }
 
     private fun updatePermissionButtons() {
@@ -201,10 +295,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendConfigBroadcast() {
         val intent = Intent(NusaOverlayService.ACTION_UPDATE_CONFIG).apply {
-            putExtra("eye_spacing", prefs.getInt("eye_spacing", 34))
+            putExtra("eye_spacing", prefs.getInt("eye_spacing", 60))
+            putExtra("eye_y_offset", prefs.getInt("eye_y_offset", 0))
+            putExtra("eye_size", prefs.getInt("eye_size", 9))
             putExtra("y_offset", prefs.getInt("y_offset", 6))
-            putExtra("notch_width", prefs.getInt("notch_width", 110))
-            putExtra("notch_height", prefs.getInt("notch_height", 36))
+            putExtra("notch_width", prefs.getInt("notch_width", 116))
+            putExtra("notch_height", prefs.getInt("notch_height", 34))
             setPackage(packageName)
         }
         sendBroadcast(intent)

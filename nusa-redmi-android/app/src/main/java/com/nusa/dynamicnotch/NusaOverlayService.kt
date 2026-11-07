@@ -1,5 +1,7 @@
 package com.nusa.dynamicnotch
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
@@ -15,7 +17,7 @@ import android.os.Looper
 import android.util.TypedValue
 import android.view.*
 import android.view.animation.OvershootInterpolator
-import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.app.NotificationCompat
@@ -35,12 +37,14 @@ class NusaOverlayService : LifecycleService() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // Redmi Note 13 Pro 5G Dimensions (calibrated)
-    private var collapsedWidthDp = 110
-    private var collapsedHeightDp = 36
+    private var collapsedWidthDp = 116
+    private var collapsedHeightDp = 34
     private var yOffsetDp = 6
-    private var eyeSpacingDp = 34
+    private var eyeSpacingDp = 60
+    private var eyeYOffsetDp = 0
+    private var eyeSizeDp = 9
     private var expandedWidthDp = 350
-    private var expandedHeightDp = 160
+    private var expandedHeightDp = 175
 
     // Views
     private lateinit var layerPet: View
@@ -51,9 +55,37 @@ class NusaOverlayService : LifecycleService() {
     private lateinit var leftEye: View
     private lateinit var rightEye: View
     private var cameraSpace: View? = null
+    private var eyesContainer: View? = null
 
-    // Media & Battery
-    private var currentSong = SongInfo()
+    // Music Player Views & State
+    private lateinit var tvMusicTitle: TextView
+    private lateinit var tvMusicArtist: TextView
+    private lateinit var musicProgressBar: ProgressBar
+    private lateinit var btnPlayPause: TextView
+    private lateinit var btnPrev: TextView
+    private lateinit var btnNext: TextView
+    private var btnCloseMusic: TextView? = null
+
+    data class Song(val title: String, val artist: String)
+    private val playlist = listOf(
+        Song("Paper Sky", "Lumen Coast"),
+        Song("Cyber Drift", "SynthWave AI"),
+        Song("Nusa Mascot Anthem", "Dynamic Beats"),
+        Song("Starlight Bloom", "HyperOS Ambient")
+    )
+    private var playlistIndex = 0
+    private var isPlaying = true
+    private var progressValue = 45
+
+    private val progressRunnable = object : Runnable {
+        override fun run() {
+            if (isPlaying && isExpanded && currentState == NotchState.MUSIC) {
+                progressValue = (progressValue + 1) % 100
+                musicProgressBar.progress = progressValue
+            }
+            mainHandler.postDelayed(this, 1000)
+        }
+    }
 
     private val eventReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -72,8 +104,8 @@ class NusaOverlayService : LifecycleService() {
                     val title = intent.getStringExtra("title") ?: ""
                     val text = intent.getStringExtra("text") ?: ""
                     if (isMedia && title.isNotEmpty()) {
-                        currentSong = SongInfo(title = title, artist = text)
-                        updateMusicView()
+                        tvMusicTitle.text = title
+                        tvMusicArtist.text = text
                         setNotchState(NotchState.MUSIC)
                     }
                 }
@@ -82,22 +114,10 @@ class NusaOverlayService : LifecycleService() {
                     collapsedWidthDp = intent.getIntExtra("notch_width", collapsedWidthDp)
                     collapsedHeightDp = intent.getIntExtra("notch_height", collapsedHeightDp)
                     eyeSpacingDp = intent.getIntExtra("eye_spacing", eyeSpacingDp)
+                    eyeYOffsetDp = intent.getIntExtra("eye_y_offset", eyeYOffsetDp)
+                    eyeSizeDp = intent.getIntExtra("eye_size", eyeSizeDp)
 
-                    params.y = dpToPx(yOffsetDp)
-                    cameraSpace?.let {
-                        val lp = it.layoutParams
-                        lp.width = dpToPx(eyeSpacingDp)
-                        it.layoutParams = lp
-                    }
-
-                    if (!isExpanded) {
-                        applyCollapsedDimensions()
-                    }
-                    try {
-                        windowManager.updateViewLayout(overlayView, params)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    applyEyeAndNotchConfig()
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     setNotchState(NotchState.CHARGING)
@@ -114,7 +134,9 @@ class NusaOverlayService : LifecycleService() {
         startForegroundNotification()
         initOverlay()
         initBlinkingAnimation()
+        initMusicPlayerControls()
         registerReceivers()
+        mainHandler.post(progressRunnable)
     }
 
     private fun startForegroundNotification() {
@@ -131,7 +153,7 @@ class NusaOverlayService : LifecycleService() {
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Nusa Notch đang hoạt động")
-            .setContentText("Đang ôm sát camera Redmi Note 13 Pro 5G")
+            .setContentText("Dynamic Notch né camera Redmi Note 13 Pro 5G")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()
@@ -153,20 +175,16 @@ class NusaOverlayService : LifecycleService() {
         leftEye = overlayView.findViewById(R.id.leftEye)
         rightEye = overlayView.findViewById(R.id.rightEye)
         cameraSpace = overlayView.findViewById(R.id.cameraSpace)
+        eyesContainer = overlayView.findViewById(R.id.eyesContainer)
 
         // Read user preferences
         val prefs = getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
         yOffsetDp = prefs.getInt("y_offset", 6)
-        collapsedWidthDp = prefs.getInt("notch_width", 110)
-        collapsedHeightDp = prefs.getInt("notch_height", 36)
-        eyeSpacingDp = prefs.getInt("eye_spacing", 34)
-
-        // Apply camera clearance gap
-        cameraSpace?.let {
-            val lp = it.layoutParams
-            lp.width = dpToPx(eyeSpacingDp)
-            it.layoutParams = lp
-        }
+        collapsedWidthDp = prefs.getInt("notch_width", 116)
+        collapsedHeightDp = prefs.getInt("notch_height", 34)
+        eyeSpacingDp = prefs.getInt("eye_spacing", 60)
+        eyeYOffsetDp = prefs.getInt("eye_y_offset", 0)
+        eyeSizeDp = prefs.getInt("eye_size", 9)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -176,8 +194,8 @@ class NusaOverlayService : LifecycleService() {
         }
 
         params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dpToPx(collapsedWidthDp),
+            dpToPx(collapsedHeightDp),
             layoutFlag,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -189,18 +207,105 @@ class NusaOverlayService : LifecycleService() {
             y = dpToPx(yOffsetDp)
         }
 
-        applyCollapsedDimensions()
+        applyEyeAndNotchConfig()
+        showLayer(layerPet)
 
         // Click on Notch toggles expand / collapse
         notchCard.setOnClickListener {
             if (isExpanded) {
-                collapseNotch()
+                setNotchState(NotchState.PET)
             } else {
-                expandNotch(NotchState.MUSIC)
+                setNotchState(NotchState.MUSIC)
             }
         }
 
         windowManager.addView(overlayView, params)
+    }
+
+    private fun applyEyeAndNotchConfig() {
+        params.y = dpToPx(yOffsetDp)
+
+        // 1. Spacing between eyes (camera punch hole clearance)
+        cameraSpace?.let {
+            val lp = it.layoutParams
+            lp.width = dpToPx(eyeSpacingDp)
+            it.layoutParams = lp
+        }
+
+        // 2. Vertical position of eyes
+        eyesContainer?.translationY = dpToPx(eyeYOffsetDp).toFloat()
+
+        // 3. Eye dimensions
+        val eyeW = dpToPx(eyeSizeDp)
+        val eyeH = dpToPx((eyeSizeDp * 1.45).toInt())
+        val leftLp = leftEye.layoutParams
+        leftLp.width = eyeW
+        leftLp.height = eyeH
+        leftEye.layoutParams = leftLp
+
+        val rightLp = rightEye.layoutParams
+        rightLp.width = eyeW
+        rightLp.height = eyeH
+        rightEye.layoutParams = rightLp
+
+        if (!isExpanded) {
+            val lp = notchCard.layoutParams
+            lp.width = dpToPx(collapsedWidthDp)
+            lp.height = dpToPx(collapsedHeightDp)
+            notchCard.layoutParams = lp
+            notchCard.radius = dpToPx(collapsedHeightDp / 2).toFloat()
+
+            params.width = dpToPx(collapsedWidthDp)
+            params.height = dpToPx(collapsedHeightDp)
+        }
+
+        try {
+            windowManager.updateViewLayout(overlayView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun initMusicPlayerControls() {
+        tvMusicTitle = overlayView.findViewById(R.id.tvMusicTitle)
+        tvMusicArtist = overlayView.findViewById(R.id.tvMusicArtist)
+        musicProgressBar = overlayView.findViewById(R.id.musicProgressBar)
+        btnPlayPause = overlayView.findViewById(R.id.btnPlayPause)
+        btnPrev = overlayView.findViewById(R.id.btnPrev)
+        btnNext = overlayView.findViewById(R.id.btnNext)
+        btnCloseMusic = overlayView.findViewById(R.id.btnCloseMusic)
+
+        updateMusicDisplay()
+
+        btnPlayPause.setOnClickListener {
+            isPlaying = !isPlaying
+            btnPlayPause.text = if (isPlaying) "⏸" else "▶"
+        }
+
+        btnNext.setOnClickListener {
+            playlistIndex = (playlistIndex + 1) % playlist.size
+            progressValue = 0
+            musicProgressBar.progress = 0
+            updateMusicDisplay()
+        }
+
+        btnPrev.setOnClickListener {
+            playlistIndex = if (playlistIndex - 1 < 0) playlist.size - 1 else playlistIndex - 1
+            progressValue = 0
+            musicProgressBar.progress = 0
+            updateMusicDisplay()
+        }
+
+        btnCloseMusic?.setOnClickListener {
+            setNotchState(NotchState.PET)
+        }
+    }
+
+    private fun updateMusicDisplay() {
+        val song = playlist[playlistIndex]
+        tvMusicTitle.text = song.title
+        tvMusicArtist.text = song.artist
+        btnPlayPause.text = if (isPlaying) "⏸" else "▶"
     }
 
     private fun setNotchState(state: NotchState) {
@@ -215,17 +320,17 @@ class NusaOverlayService : LifecycleService() {
                 showLayer(layerIdle)
             }
             NotchState.MUSIC -> {
-                updateMusicView()
-                expandNotch(state)
+                updateMusicDisplay()
                 showLayer(layerMusic)
+                expandNotch(expandedWidthDp, expandedHeightDp)
             }
             NotchState.POMODORO -> {
-                expandNotch(state)
                 showLayer(layerPomo)
+                expandNotch(expandedWidthDp, expandedHeightDp)
             }
             NotchState.CHARGING -> {
-                expandHud(320, 56)
                 showLayer(layerCharging)
+                expandNotch(320, 56)
             }
             else -> {}
         }
@@ -237,55 +342,63 @@ class NusaOverlayService : LifecycleService() {
         }
     }
 
-    private fun updateMusicView() {
-        overlayView.findViewById<TextView>(R.id.tvMusicTitle)?.text = currentSong.title
-        overlayView.findViewById<TextView>(R.id.tvMusicArtist)?.text = currentSong.artist
-    }
-
-    private fun expandNotch(targetState: NotchState) {
+    private fun expandNotch(targetWidthDp: Int, targetHeightDp: Int) {
         isExpanded = true
-        animateCardSize(
-            notchCard.width, dpToPx(expandedWidthDp),
-            notchCard.height, dpToPx(expandedHeightDp),
-            dpToPx(collapsedHeightDp / 2), dpToPx(28)
-        )
-    }
 
-    private fun expandHud(widthDp: Int, heightDp: Int) {
-        isExpanded = true
+        val targetW = dpToPx(targetWidthDp)
+        val targetH = dpToPx(targetHeightDp)
+
+        // Expand WindowManager immediately so child view is never clipped
+        params.width = targetW
+        params.height = targetH
+        try {
+            windowManager.updateViewLayout(overlayView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val startW = if (notchCard.width > 0) notchCard.width else dpToPx(collapsedWidthDp)
+        val startH = if (notchCard.height > 0) notchCard.height else dpToPx(collapsedHeightDp)
+
         animateCardSize(
-            notchCard.width, dpToPx(widthDp),
-            notchCard.height, dpToPx(heightDp),
-            dpToPx(collapsedHeightDp / 2), dpToPx(20)
+            startW, targetW,
+            startH, targetH,
+            dpToPx(collapsedHeightDp / 2), dpToPx(28),
+            null
         )
     }
 
     private fun collapseNotch() {
         isExpanded = false
-        animateCardSize(
-            notchCard.width, dpToPx(collapsedWidthDp),
-            notchCard.height, dpToPx(collapsedHeightDp),
-            dpToPx(28), dpToPx(collapsedHeightDp / 2)
-        )
-        showLayer(layerPet)
-    }
+        val targetW = dpToPx(collapsedWidthDp)
+        val targetH = dpToPx(collapsedHeightDp)
 
-    private fun applyCollapsedDimensions() {
-        val layoutParams = notchCard.layoutParams
-        layoutParams.width = dpToPx(collapsedWidthDp)
-        layoutParams.height = dpToPx(collapsedHeightDp)
-        notchCard.layoutParams = layoutParams
-        notchCard.radius = dpToPx(collapsedHeightDp / 2).toFloat()
+        animateCardSize(
+            notchCard.width, targetW,
+            notchCard.height, targetH,
+            dpToPx(28), dpToPx(collapsedHeightDp / 2)
+        ) {
+            // Shrink window back to pill bounds on animation end
+            params.width = targetW
+            params.height = targetH
+            try {
+                windowManager.updateViewLayout(overlayView, params)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        showLayer(layerPet)
     }
 
     private fun animateCardSize(
         fromW: Int, toW: Int,
         fromH: Int, toH: Int,
-        fromRadius: Int, toRadius: Int
+        fromRadius: Int, toRadius: Int,
+        onEnd: (() -> Unit)?
     ) {
         val animator = ValueAnimator.ofFloat(0f, 1f)
-        animator.duration = 320
-        animator.interpolator = OvershootInterpolator(1.15f)
+        animator.duration = 280
+        animator.interpolator = OvershootInterpolator(1.1f)
         animator.addUpdateListener { valAnim ->
             val fraction = valAnim.animatedValue as Float
             val currentW = (fromW + (toW - fromW) * fraction).toInt()
@@ -297,13 +410,12 @@ class NusaOverlayService : LifecycleService() {
             lp.height = currentH
             notchCard.layoutParams = lp
             notchCard.radius = currentR
-
-            try {
-                windowManager.updateViewLayout(overlayView, params)
-            } catch (e: Exception) {
-                // ignore transient detached window
-            }
         }
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                onEnd?.invoke()
+            }
+        })
         animator.start()
     }
 
@@ -311,15 +423,15 @@ class NusaOverlayService : LifecycleService() {
         val blinkRunnable = object : Runnable {
             override fun run() {
                 if (currentState == NotchState.PET && !isExpanded) {
-                    leftEye.animate().scaleY(0.1f).setDuration(120).withEndAction {
-                        leftEye.animate().scaleY(1.0f).setDuration(150).start()
+                    leftEye.animate().scaleY(0.1f).setDuration(110).withEndAction {
+                        leftEye.animate().scaleY(1.0f).setDuration(140).start()
                     }.start()
 
-                    rightEye.animate().scaleY(0.1f).setDuration(120).withEndAction {
-                        rightEye.animate().scaleY(1.0f).setDuration(150).start()
+                    rightEye.animate().scaleY(0.1f).setDuration(110).withEndAction {
+                        rightEye.animate().scaleY(1.0f).setDuration(140).start()
                     }.start()
                 }
-                mainHandler.postDelayed(this, 4500)
+                mainHandler.postDelayed(this, 4000)
             }
         }
         mainHandler.postDelayed(blinkRunnable, 2000)
@@ -332,7 +444,11 @@ class NusaOverlayService : LifecycleService() {
             addAction(ACTION_UPDATE_CONFIG)
             addAction(Intent.ACTION_POWER_CONNECTED)
         }
-        registerReceiver(eventReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(eventReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(eventReceiver, filter)
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -345,6 +461,7 @@ class NusaOverlayService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        mainHandler.removeCallbacksAndMessages(null)
         unregisterReceiver(eventReceiver)
         if (::overlayView.isInitialized) {
             windowManager.removeView(overlayView)

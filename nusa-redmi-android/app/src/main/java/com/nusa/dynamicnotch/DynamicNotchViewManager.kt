@@ -54,14 +54,14 @@ object DynamicNotchViewManager {
     private var isExpanded: Boolean = false
     private var isMinimalMode: Boolean = false
 
-    // Dimensions in dp
-    private var collapsedWidthDp: Int = 138
-    private var collapsedHeightDp: Int = 46
-    private var compactActivityWidthDp: Int = 168
-    private var expandedWidthDp: Int = 380
+    // Dimensions in dp (Calibrated specifically for Redmi Note 13 Pro 5G)
+    private var collapsedWidthDp: Int = 140
+    private var collapsedHeightDp: Int = 36
+    private var compactActivityWidthDp: Int = 148
+    private var expandedWidthDp: Int = 376
     private var expandedHeightDp: Int = 195
-    private var yOffsetDp: Int = 4
-    private var eyeSpacingDp: Int = 72
+    private var yOffsetDp: Int = 2
+    private var eyeSpacingDp: Int = 68
     private var eyeYOffsetDp: Int = 0
     private var eyeSizeDp: Int = 10
 
@@ -146,6 +146,16 @@ object DynamicNotchViewManager {
     private var btnCloseNotif: TextView? = null
     private var currentNotifPendingIntent: PendingIntent? = null
 
+    // Outline and Artwork views
+    private var vIslandStroke: View? = null
+    private var vBubbleStroke: View? = null
+    private var cardCompactMusicArt: View? = null
+    private var ivCompactMusicArt: ImageView? = null
+    private var compactMusicIcon: TextView? = null
+    private var ivMusicArtLarge: ImageView? = null
+    private var tvMusicArt: TextView? = null
+    private var btnCloseCharge: TextView? = null
+
     // Charging controls
     private var tvChargePercentage: TextView? = null
 
@@ -158,6 +168,12 @@ object DynamicNotchViewManager {
     private var pomoSeconds = 25 * 60
     private var isPomoRunning = true
     private var callSeconds = 42
+
+    private val pauseTimeoutRunnable = Runnable {
+        if (currentState == NotchState.MUSIC && !isPlaying && !isExpanded) {
+            setNotchState(NotchState.PET)
+        }
+    }
 
     private val songs = listOf(
         Pair("Paper Sky", "Lumen Coast"),
@@ -362,12 +378,27 @@ object DynamicNotchViewManager {
         layerCall = overlayView?.findViewById(R.id.layerCall)
         layerNotification = overlayView?.findViewById(R.id.layerNotification)
 
-        // Preferences
+        // Apple Specular Outlines and Real Artwork
+        vIslandStroke = overlayView?.findViewById(R.id.vIslandStroke)
+        vBubbleStroke = overlayView?.findViewById(R.id.vBubbleStroke)
+        cardCompactMusicArt = overlayView?.findViewById(R.id.cardCompactMusicArt)
+        ivCompactMusicArt = overlayView?.findViewById(R.id.ivCompactMusicArt)
+        compactMusicIcon = overlayView?.findViewById(R.id.compactMusicIcon)
+        ivMusicArtLarge = overlayView?.findViewById(R.id.ivMusicArtLarge)
+        tvMusicArt = overlayView?.findViewById(R.id.tvMusicArt)
+        btnCloseCharge = overlayView?.findViewById(R.id.btnCloseCharge)
+
+        btnCloseCharge?.setOnClickListener {
+            performHaptic()
+            collapseToCompact()
+        }
+
+        // Preferences (Calibrated for Redmi Note 13 Pro 5G)
         val prefs = context.getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
-        yOffsetDp = prefs.getInt("y_offset", 4)
-        collapsedWidthDp = prefs.getInt("notch_width", 138)
-        collapsedHeightDp = prefs.getInt("notch_height", 46)
-        eyeSpacingDp = prefs.getInt("eye_spacing", 72)
+        yOffsetDp = prefs.getInt("y_offset", 2)
+        collapsedWidthDp = prefs.getInt("notch_width", 140)
+        collapsedHeightDp = prefs.getInt("notch_height", 36)
+        eyeSpacingDp = prefs.getInt("eye_spacing", 68)
         eyeYOffsetDp = prefs.getInt("eye_y_offset", 0)
         eyeSizeDp = prefs.getInt("eye_size", 10)
 
@@ -784,6 +815,22 @@ object DynamicNotchViewManager {
             tvMusicArtist?.text = artist
             btnPlayPause?.text = if (isPlaying) "⏸" else "▶"
 
+            if (albumArt != null) {
+                cardCompactMusicArt?.visibility = View.VISIBLE
+                ivCompactMusicArt?.setImageBitmap(albumArt)
+                compactMusicIcon?.visibility = View.GONE
+
+                ivMusicArtLarge?.visibility = View.VISIBLE
+                ivMusicArtLarge?.setImageBitmap(albumArt)
+                tvMusicArt?.visibility = View.GONE
+            } else {
+                cardCompactMusicArt?.visibility = View.GONE
+                compactMusicIcon?.visibility = View.VISIBLE
+
+                ivMusicArtLarge?.visibility = View.GONE
+                tvMusicArt?.visibility = View.VISIBLE
+            }
+
             val appLabel = getAppLabel(packageName)
             tvOutputRoute?.text = "🎧 $appLabel • Loa ngoài"
 
@@ -802,8 +849,14 @@ object DynamicNotchViewManager {
                 tvTimeRemaining?.text = String.format("-%d:%02d", remMin, remSec)
             }
 
-            if (currentState != NotchState.MUSIC && !isExpanded) {
-                setNotchState(NotchState.MUSIC)
+            if (isPlaying) {
+                mainHandler.removeCallbacks(pauseTimeoutRunnable)
+                if (currentState != NotchState.MUSIC && !isExpanded) {
+                    setNotchState(NotchState.MUSIC)
+                }
+            } else {
+                mainHandler.removeCallbacks(pauseTimeoutRunnable)
+                mainHandler.postDelayed(pauseTimeoutRunnable, 15000)
             }
         }
     }
@@ -1075,6 +1128,7 @@ object DynamicNotchViewManager {
                     notchCard?.layoutParams = lp
                 }
                 notchCard?.radius = r
+                (vIslandStroke?.background?.mutate() as? android.graphics.drawable.GradientDrawable)?.cornerRadius = r
             }
         }
         anim.addListener(object : AnimatorListenerAdapter() {

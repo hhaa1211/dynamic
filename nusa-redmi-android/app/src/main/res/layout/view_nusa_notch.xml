@@ -10,11 +10,11 @@
     <!-- Primary Dynamic Island Card -->
     <androidx.cardview.widget.CardView
         android:id="@+id/notchCard"
-        android:layout_width="138dp"
-        android:layout_height="46dp"
+        android:layout_width="140dp"
+        android:layout_height="36dp"
         android:layout_gravity="center_horizontal"
         app:cardBackgroundColor="@color/notch_background"
-        app:cardCornerRadius="23dp"
+        app:cardCornerRadius="18dp"
         app:cardElevation="12dp">
 
         <FrameLayout
@@ -79,16 +79,37 @@
                 android:paddingEnd="12dp"
                 android:visibility="gone">
 
-                <!-- Leading: Album Art glyph -->
-                <TextView
-                    android:id="@+id/compactMusicIcon"
+                <!-- Leading: Album Art glyph / Real Artwork -->
+                <FrameLayout
                     android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:background="@drawable/bg_notch_pill"
-                    android:backgroundTint="#19B8FF"
-                    android:gravity="center"
-                    android:text="🎵"
-                    android:textSize="11sp" />
+                    android:layout_height="20dp">
+
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/cardCompactMusicArt"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone"
+                        app:cardBackgroundColor="@android:color/transparent"
+                        app:cardCornerRadius="5dp"
+                        app:cardElevation="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivCompactMusicArt"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+                    </androidx.cardview.widget.CardView>
+
+                    <TextView
+                        android:id="@+id/compactMusicIcon"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_notch_pill"
+                        android:backgroundTint="#19B8FF"
+                        android:gravity="center"
+                        android:text="🎵"
+                        android:textSize="11sp" />
+                </FrameLayout>
 
                 <!-- Center: Clearance for camera cutout -->
                 <View
@@ -368,14 +389,29 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tvMusicArt"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/bg_pet_ambient"
-                        android:gravity="center"
-                        android:text="🎵"
-                        android:textSize="22sp" />
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        app:cardBackgroundColor="@color/panel_black"
+                        app:cardCornerRadius="10dp"
+                        app:cardElevation="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivMusicArtLarge"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/tvMusicArt"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_pet_ambient"
+                            android:gravity="center"
+                            android:text="🎵"
+                            android:textSize="22sp" />
+                    </androidx.cardview.widget.CardView>
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -907,19 +943,26 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Apple Specular Frosted Outline (0.8dp stroke) -->
+            <View
+                android:id="@+id/vIslandStroke"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_island_stroke" />
+
         </FrameLayout>
     </androidx.cardview.widget.CardView>
 
     <!-- Secondary Detached Bubble (Apple Minimal Presentation) -->
     <androidx.cardview.widget.CardView
         android:id="@+id/detachedBubble"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         android:layout_gravity="center_horizontal"
         android:translationX="114dp"
         android:visibility="gone"
         app:cardBackgroundColor="@color/notch_background"
-        app:cardCornerRadius="22dp"
+        app:cardCornerRadius="18dp"
         app:cardElevation="12dp">
 
         <FrameLayout
@@ -932,7 +975,14 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="⏱️"
-                android:textSize="16sp" />
+                android:textSize="14sp" />
+
+            <!-- Apple Specular Frosted Outline (0.8dp stroke) -->
+            <View
+                android:id="@+id/vBubbleStroke"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_island_stroke" />
         </FrameLayout>
     </androidx.cardview.widget.CardView>
 

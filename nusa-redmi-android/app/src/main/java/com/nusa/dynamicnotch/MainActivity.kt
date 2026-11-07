@@ -86,12 +86,12 @@ class MainActivity : AppCompatActivity() {
         tvHeightLabel = findViewById(R.id.tvHeightLabel)
 
         // Calibrated defaults for Redmi Note 13 Pro 5G (Punch hole centered ~14dp diameter)
-        val spacing = prefs.getInt("eye_spacing", 72)
+        val spacing = prefs.getInt("eye_spacing", 68)
         val eyeY = prefs.getInt("eye_y_offset", 0) // range: -15 to +25 -> progress 0 to 40
         val eyeSize = prefs.getInt("eye_size", 10)  // range: 6 to 18 -> progress 0 to 12
-        val yOffset = prefs.getInt("y_offset", 4)
-        val notchW = prefs.getInt("notch_width", 138)
-        val notchH = prefs.getInt("notch_height", 46)
+        val yOffset = prefs.getInt("y_offset", 2)
+        val notchW = prefs.getInt("notch_width", 140)
+        val notchH = prefs.getInt("notch_height", 36)
 
         seekEyeSpacing.progress = spacing
         seekEyeYOffset.progress = eyeY + 15
@@ -138,19 +138,19 @@ class MainActivity : AppCompatActivity() {
 
         // Fast Preset 1: Né camera chuẩn Redmi Note 13 Pro 5G
         btnPresetRedmi.setOnClickListener {
-            applyPreset(spacing = 72, eyeY = 0, eyeSize = 10, yOffset = 4, notchW = 138, notchH = 46)
+            applyPreset(spacing = 68, eyeY = 0, eyeSize = 10, yOffset = 2, notchW = 140, notchH = 36)
             Toast.makeText(this, "Đã áp dụng: Né camera chuẩn Redmi Note 13 Pro 5G", Toast.LENGTH_SHORT).show()
         }
 
         // Fast Preset 2: Mắt to rõ né xa camera
         btnPresetWide.setOnClickListener {
-            applyPreset(spacing = 82, eyeY = 0, eyeSize = 13, yOffset = 4, notchW = 148, notchH = 46)
+            applyPreset(spacing = 76, eyeY = 0, eyeSize = 12, yOffset = 2, notchW = 148, notchH = 38)
             Toast.makeText(this, "Đã áp dụng: Mắt to né xa camera", Toast.LENGTH_SHORT).show()
         }
 
         // Fast Preset 3: Đặt mắt nằm dưới nốt ruồi camera
         btnPresetBelow.setOnClickListener {
-            applyPreset(spacing = 36, eyeY = 12, eyeSize = 10, yOffset = 2, notchW = 126, notchH = 52)
+            applyPreset(spacing = 36, eyeY = 10, eyeSize = 10, yOffset = 2, notchW = 126, notchH = 46)
             Toast.makeText(this, "Đã áp dụng: Mắt đặt phía dưới camera", Toast.LENGTH_SHORT).show()
         }
 
@@ -329,12 +329,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendConfigBroadcast() {
         val intent = Intent(NusaOverlayService.ACTION_UPDATE_CONFIG).apply {
-            putExtra("eye_spacing", prefs.getInt("eye_spacing", 60))
+            putExtra("eye_spacing", prefs.getInt("eye_spacing", 68))
             putExtra("eye_y_offset", prefs.getInt("eye_y_offset", 0))
-            putExtra("eye_size", prefs.getInt("eye_size", 9))
-            putExtra("y_offset", prefs.getInt("y_offset", 6))
-            putExtra("notch_width", prefs.getInt("notch_width", 116))
-            putExtra("notch_height", prefs.getInt("notch_height", 34))
+            putExtra("eye_size", prefs.getInt("eye_size", 10))
+            putExtra("y_offset", prefs.getInt("y_offset", 2))
+            putExtra("notch_width", prefs.getInt("notch_width", 140))
+            putExtra("notch_height", prefs.getInt("notch_height", 36))
             setPackage(packageName)
         }
         sendBroadcast(intent)

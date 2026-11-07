@@ -57,7 +57,7 @@ object DynamicNotchViewManager {
     // Dimensions in dp (Calibrated specifically for Redmi Note 13 Pro 5G)
     private var collapsedWidthDp: Int = 140
     private var collapsedHeightDp: Int = 36
-    private var compactActivityWidthDp: Int = 148
+    private var compactActivityWidthDp: Int = 156
     private var expandedWidthDp: Int = 376
     private var expandedHeightDp: Int = 195
     private var yOffsetDp: Int = 2
@@ -636,7 +636,7 @@ object DynamicNotchViewManager {
         val targetWidth = when (currentState) {
             NotchState.PET -> collapsedWidthDp
             NotchState.MINIMAL -> compactActivityWidthDp
-            NotchState.RINGER -> 148
+            NotchState.RINGER -> 160
             else -> compactActivityWidthDp
         }
 
@@ -1083,7 +1083,7 @@ object DynamicNotchViewManager {
 
         val targetWidthDp = when (currentState) {
             NotchState.PET -> collapsedWidthDp
-            NotchState.RINGER -> 148
+            NotchState.RINGER -> 160
             else -> compactActivityWidthDp
         }
         val targetW = dpToPx(targetWidthDp)

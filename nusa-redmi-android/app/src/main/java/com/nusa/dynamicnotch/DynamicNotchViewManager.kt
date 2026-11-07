@@ -559,8 +559,34 @@ object DynamicNotchViewManager {
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    isDownOnCard = false
                     notchCard?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(120)?.start()
+                    if (isDownOnCard) {
+                        isDownOnCard = false
+                        val dx = event.rawX - startX
+                        val dy = event.rawY - startY
+                        val absDx = abs(dx)
+                        val absDy = abs(dy)
+
+                        if (!isExpanded) {
+                            if (absDx > 30 && absDx > absDy * 1.2f) {
+                                performHaptic()
+                                if (currentState == NotchState.MUSIC) {
+                                    if (dx < 0) {
+                                        if (isRealMediaActive) NusaNotificationListener.skipNext()
+                                        else skipNextFallback()
+                                    } else {
+                                        if (isRealMediaActive) NusaNotificationListener.skipPrev()
+                                        else skipPrevFallback()
+                                    }
+                                } else {
+                                    winkBothEyes()
+                                }
+                            } else if (dy > 20 && dy > absDx) {
+                                performHaptic()
+                                expandCurrentState()
+                            }
+                        }
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {

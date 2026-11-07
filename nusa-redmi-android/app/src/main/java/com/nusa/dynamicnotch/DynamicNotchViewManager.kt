@@ -979,6 +979,8 @@ object DynamicNotchViewManager {
                 collapseToCompact()
                 showCompact(compactRinger)
                 detachedBubble?.visibility = View.GONE
+                mainHandler.removeCallbacks(dismissRingerRunnable)
+                mainHandler.postDelayed(dismissRingerRunnable, 2500)
             }
         }
     }

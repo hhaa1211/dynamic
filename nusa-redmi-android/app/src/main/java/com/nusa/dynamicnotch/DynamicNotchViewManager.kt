@@ -567,14 +567,8 @@ object DynamicNotchViewManager {
             audioPlaybackCallback = object : AudioManager.AudioPlaybackCallback() {
                 override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
                     super.onPlaybackConfigChanged(configs)
-                    val activeMedia = configs?.any { config ->
-                        config.isActive && (
-                            config.audioAttributes.usage == AudioAttributes.USAGE_MEDIA ||
-                            config.audioAttributes.usage == AudioAttributes.USAGE_GAME
-                        )
-                    } ?: false
-
-                    onSystemAudioPlaybackChanged(activeMedia)
+                    val isMusicPlaying = audioManager?.isMusicActive == true
+                    onSystemAudioPlaybackChanged(isMusicPlaying)
                 }
             }
             try {

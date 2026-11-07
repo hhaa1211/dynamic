@@ -48,4 +48,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.lifecycle:lifecycle-service:2.7.0'
     implementation 'androidx.media:media:1.7.0'
+    implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    implementation 'androidx.palette:palette-ktx:1.0.0'
+    testImplementation 'junit:junit:4.13.2'
 }

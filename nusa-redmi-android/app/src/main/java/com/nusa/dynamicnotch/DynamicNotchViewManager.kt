@@ -33,6 +33,11 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.palette.graphics.Palette
+import com.nusa.dynamicnotch.core.fsm.IslandPriorityManager
+import com.nusa.dynamicnotch.core.gestures.IslandGesture
+import com.nusa.dynamicnotch.core.gestures.IslandGestureClassifier
+import com.nusa.dynamicnotch.core.haptics.NusaHapticEngine
 import com.nusa.dynamicnotch.models.NotchState
 import kotlin.math.abs
 
@@ -49,8 +54,17 @@ object DynamicNotchViewManager {
     var isAccessibilityMode = false
         private set
 
-    private var currentState: NotchState = NotchState.PET
-    private var previousState: NotchState = NotchState.PET
+    private var hapticEngine: NusaHapticEngine? = null
+    private val priorityManager = IslandPriorityManager { _, newState ->
+        applyStateTransition(newState)
+    }
+
+    val currentState: NotchState
+        get() = priorityManager.currentState
+
+    val previousState: NotchState
+        get() = priorityManager.baselineState
+
     private var isExpanded: Boolean = false
     private var isMinimalMode: Boolean = false
 
@@ -182,14 +196,7 @@ object DynamicNotchViewManager {
             showCompact(compactCharging)
             mainHandler.postDelayed({
                 if (currentState == NotchState.CHARGING) {
-                    val target = if (previousState != NotchState.CHARGING && previousState != NotchState.NOTIFICATION && previousState != NotchState.RINGER) {
-                        previousState
-                    } else if (isRealMediaActive) {
-                        NotchState.MUSIC
-                    } else {
-                        NotchState.PET
-                    }
-                    setNotchState(target)
+                    priorityManager.dismissTransient(NotchState.CHARGING)
                 }
             }, 2500)
         }
@@ -318,6 +325,26 @@ object DynamicNotchViewManager {
                         collapseToCompact()
                     }
                 }
+                android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                    val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE, android.bluetooth.BluetoothDevice::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
+                    }
+                    val deviceName = try {
+                        device?.name ?: "Tai nghe Bluetooth"
+                    } catch (e: SecurityException) {
+                        "Tai nghe Bluetooth"
+                    }
+                    onNotificationReceived(
+                        packageName = "android.bluetooth",
+                        title = deviceName,
+                        text = "Đã kết nối • Âm thanh nổi",
+                        largeIcon = null,
+                        pendingIntent = null
+                    )
+                }
                 NusaOverlayService.ACTION_SET_STATE -> {
                     val stateStr = intent.getStringExtra("state") ?: "PET"
                     val targetState = try {
@@ -348,7 +375,8 @@ object DynamicNotchViewManager {
             detach()
         }
 
-        currentContext = context
+        currentContext = context.applicationContext
+        hapticEngine = NusaHapticEngine(context.applicationContext)
         isAccessibilityMode = asAccessibility
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -414,15 +442,8 @@ object DynamicNotchViewManager {
         btnCloseCharge = overlayView?.findViewById(R.id.btnCloseCharge)
 
         btnCloseCharge?.setOnClickListener {
-            performHaptic()
-            val target = if (previousState != NotchState.CHARGING && previousState != NotchState.NOTIFICATION && previousState != NotchState.RINGER) {
-                previousState
-            } else if (isRealMediaActive) {
-                NotchState.MUSIC
-            } else {
-                NotchState.PET
-            }
-            setNotchState(target)
+            performHaptic(NusaHapticEngine.FeedbackType.LIGHT_TICK)
+            priorityManager.dismissTransient(NotchState.CHARGING)
         }
 
         // Preferences (Calibrated for Redmi Note 13 Pro 5G)
@@ -504,6 +525,7 @@ object DynamicNotchViewManager {
             e.printStackTrace()
         } finally {
             isAttached = false
+            hapticEngine = null
             overlayView = null
             windowManager = null
             currentContext = null
@@ -521,6 +543,7 @@ object DynamicNotchViewManager {
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(NusaOverlayService.ACTION_SET_STATE)
             addAction(NusaOverlayService.ACTION_UPDATE_CONFIG)
         }
@@ -633,106 +656,98 @@ object DynamicNotchViewManager {
                     if (!isDownOnCard) return@setOnTouchListener true
                     isDownOnCard = false
 
-                    val dx = event.rawX - startX
-                    val dy = event.rawY - startY
                     val duration = System.currentTimeMillis() - startTime
-                    val absDx = abs(dx)
-                    val absDy = abs(dy)
+                    val gesture = IslandGestureClassifier.classify(
+                        startX = startX,
+                        startY = startY,
+                        endX = event.rawX,
+                        endY = event.rawY,
+                        durationMs = duration,
+                        isExpanded = isExpanded
+                    )
 
-                    if (!isExpanded) {
-                        // --- COMPACT GESTURES ---
-                        if (absDx > 35 && absDx > absDy * 1.2f) {
-                            // Horizontal Swipe on compact notch
-                            performHaptic()
+                    when (gesture) {
+                        IslandGesture.SWIPE_LEFT -> {
+                            performHaptic(NusaHapticEngine.FeedbackType.MEDIUM_CLICK)
                             if (currentState == NotchState.MUSIC) {
-                                if (dx < 0) {
-                                    // Swipe Left -> Next Track
-                                    if (isRealMediaActive) NusaNotificationListener.skipNext()
-                                    else skipNextFallback()
-                                } else {
-                                    // Swipe Right -> Previous Track
-                                    if (isRealMediaActive) NusaNotificationListener.skipPrev()
-                                    else skipPrevFallback()
-                                }
+                                if (isRealMediaActive) NusaNotificationListener.skipNext()
+                                else skipNextFallback()
                             } else {
                                 winkBothEyes()
                             }
                             true
-                        } else if (dy > 25 && dy > absDx) {
-                            // Swipe Down -> Expand
-                            performHaptic()
-                            expandCurrentState()
-                            true
-                        } else if (duration >= 500 && absDx < 30 && absDy < 30) {
-                            // Long Press on Compact Notch -> Always expand into rich interactive widget
-                            performHaptic()
-                            expandCurrentState()
-                            true
-                        } else if (absDx < 30 && absDy < 30 && duration < 500) {
-                            // Direct Tap on Notch
-                            performHaptic()
-                            if (currentState == NotchState.NOTIFICATION) {
-                                if (currentNotifPendingIntent != null) {
-                                    try {
-                                        currentNotifPendingIntent?.send()
-                                        dismissTransientNotification()
-                                    } catch (e: Exception) {
-                                        expandCurrentState()
-                                    }
-                                } else {
-                                    dismissTransientNotification()
-                                }
-                            } else if (currentState == NotchState.PET) {
-                                winkBothEyes()
-                                // If real media is active or paused, switch to music
-                                if (isRealMediaActive) {
-                                    setNotchState(NotchState.MUSIC)
-                                }
-                            } else if (currentState == NotchState.MUSIC && !activeMediaPackage.isNullOrEmpty()) {
-                                try {
-                                    val intent = currentContext?.packageManager?.getLaunchIntentForPackage(activeMediaPackage!!)
-                                    if (intent != null) {
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        currentContext?.startActivity(intent)
-                                    } else {
-                                        expandCurrentState()
-                                    }
-                                } catch (e: Exception) {
-                                    expandCurrentState()
-                                }
-                            } else {
-                                expandCurrentState()
-                            }
-                            true
-                        } else {
-                            false
                         }
-                    } else {
-                        // --- EXPANDED GESTURES ---
-                        if (dy < -30 && absDy > absDx) {
-                            // Swipe Up on expanded card -> Collapse or dismiss
-                            performHaptic()
+                        IslandGesture.SWIPE_RIGHT -> {
+                            performHaptic(NusaHapticEngine.FeedbackType.MEDIUM_CLICK)
+                            if (currentState == NotchState.MUSIC) {
+                                if (isRealMediaActive) NusaNotificationListener.skipPrev()
+                                else skipPrevFallback()
+                            } else {
+                                winkBothEyes()
+                            }
+                            true
+                        }
+                        IslandGesture.SWIPE_DOWN, IslandGesture.LONG_PRESS -> {
+                            performHaptic(NusaHapticEngine.FeedbackType.HEAVY_POP)
+                            expandCurrentState()
+                            true
+                        }
+                        IslandGesture.SWIPE_UP -> {
+                            performHaptic(NusaHapticEngine.FeedbackType.LIGHT_TICK)
                             if (currentState == NotchState.NOTIFICATION) {
                                 dismissTransientNotification()
                             } else {
                                 collapseToCompact()
                             }
                             true
-                        } else if (currentState == NotchState.NOTIFICATION && absDx < 30 && absDy < 30 && duration < 600) {
-                            // Tap on notification card opens app
-                            if (currentNotifPendingIntent != null) {
-                                try {
-                                    currentNotifPendingIntent?.send()
-                                    dismissTransientNotification()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                        }
+                        IslandGesture.TAP -> {
+                            performHaptic(NusaHapticEngine.FeedbackType.LIGHT_TICK)
+                            if (!isExpanded) {
+                                if (currentState == NotchState.NOTIFICATION) {
+                                    if (currentNotifPendingIntent != null) {
+                                        try {
+                                            currentNotifPendingIntent?.send()
+                                            dismissTransientNotification()
+                                        } catch (e: Exception) {
+                                            expandCurrentState()
+                                        }
+                                    } else {
+                                        dismissTransientNotification()
+                                    }
+                                } else if (currentState == NotchState.PET) {
+                                    winkBothEyes()
+                                    if (isRealMediaActive) {
+                                        setNotchState(NotchState.MUSIC)
+                                    }
+                                } else if (currentState == NotchState.MUSIC && !activeMediaPackage.isNullOrEmpty()) {
+                                    try {
+                                        val intent = currentContext?.packageManager?.getLaunchIntentForPackage(activeMediaPackage!!)
+                                        if (intent != null) {
+                                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            currentContext?.startActivity(intent)
+                                        } else {
+                                            expandCurrentState()
+                                        }
+                                    } catch (e: Exception) {
+                                        expandCurrentState()
+                                    }
+                                } else {
+                                    expandCurrentState()
+                                }
+                            } else {
+                                if (currentState == NotchState.NOTIFICATION && currentNotifPendingIntent != null) {
+                                    try {
+                                        currentNotifPendingIntent?.send()
+                                        dismissTransientNotification()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
                                 }
                             }
                             true
-                        } else {
-                            // Allow children (buttons, seekbars) to handle clicks
-                            false
                         }
+                        IslandGesture.NONE -> false
                     }
                 }
                 else -> false
@@ -1000,12 +1015,24 @@ object DynamicNotchViewManager {
                 ivMusicArtLarge?.visibility = View.VISIBLE
                 ivMusicArtLarge?.setImageBitmap(albumArt)
                 tvMusicArt?.visibility = View.GONE
+
+                try {
+                    Palette.from(albumArt).generate { palette ->
+                        val color = palette?.getVibrantColor(0x33FFFFFF)
+                            ?: palette?.getDominantColor(0x33FFFFFF)
+                            ?: 0x33FFFFFF
+                        vIslandStroke?.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
             } else {
                 cardCompactMusicArt?.visibility = View.GONE
                 compactMusicIcon?.visibility = View.VISIBLE
 
                 ivMusicArtLarge?.visibility = View.GONE
                 tvMusicArt?.visibility = View.VISIBLE
+                vIslandStroke?.backgroundTintList = android.content.res.ColorStateList.valueOf(0x22FFFFFF)
             }
 
             val appLabel = getAppLabel(packageName)
@@ -1046,9 +1073,6 @@ object DynamicNotchViewManager {
         pendingIntent: PendingIntent?
     ) {
         mainHandler.post {
-            if (currentState != NotchState.NOTIFICATION && currentState != NotchState.RINGER) {
-                previousState = currentState
-            }
             currentNotifPendingIntent = pendingIntent
 
             val appLabel = getAppLabel(packageName)
@@ -1076,14 +1100,7 @@ object DynamicNotchViewManager {
 
     fun dismissTransientNotification() {
         mainHandler.removeCallbacks(dismissNotifRunnable)
-        val target = if (previousState != NotchState.NOTIFICATION && previousState != NotchState.CHARGING && previousState != NotchState.RINGER) {
-            previousState
-        } else if (isRealMediaActive) {
-            NotchState.MUSIC
-        } else {
-            NotchState.PET
-        }
-        setNotchState(target)
+        priorityManager.dismissTransient(NotchState.NOTIFICATION)
     }
 
     private val dismissNotifRunnable = Runnable {
@@ -1094,9 +1111,6 @@ object DynamicNotchViewManager {
 
     private fun showRingerHUD(mode: Int) {
         mainHandler.post {
-            if (currentState != NotchState.RINGER && currentState != NotchState.NOTIFICATION) {
-                previousState = currentState
-            }
             when (mode) {
                 AudioManager.RINGER_MODE_SILENT, AudioManager.RINGER_MODE_VIBRATE -> {
                     tvRingerIcon?.text = "🔕"
@@ -1109,7 +1123,7 @@ object DynamicNotchViewManager {
                     tvRingerText?.setTextColor(0xFF34C759.toInt())
                 }
             }
-            performHaptic()
+            performHaptic(NusaHapticEngine.FeedbackType.MEDIUM_CLICK)
             setNotchState(NotchState.RINGER)
 
             mainHandler.removeCallbacks(dismissRingerRunnable)
@@ -1119,19 +1133,15 @@ object DynamicNotchViewManager {
 
     private val dismissRingerRunnable = Runnable {
         if (currentState == NotchState.RINGER) {
-            val target = if (previousState != NotchState.RINGER && previousState != NotchState.NOTIFICATION && previousState != NotchState.CHARGING) {
-                previousState
-            } else if (isRealMediaActive) {
-                NotchState.MUSIC
-            } else {
-                NotchState.PET
-            }
-            setNotchState(target)
+            priorityManager.dismissTransient(NotchState.RINGER)
         }
     }
 
     fun setNotchState(state: NotchState) {
-        currentState = state
+        priorityManager.requestState(state)
+    }
+
+    private fun applyStateTransition(state: NotchState) {
         isMinimalMode = (state == NotchState.MINIMAL)
 
         when (state) {
@@ -1339,25 +1349,8 @@ object DynamicNotchViewManager {
         anim.start()
     }
 
-    private fun performHaptic() {
-        try {
-            val ctx = currentContext ?: return
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vm = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vm?.defaultVibrator?.vibrate(VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                val v = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v?.vibrate(VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE))
-                } else {
-                    @Suppress("DEPRECATION")
-                    v?.vibrate(12)
-                }
-            }
-        } catch (e: Exception) {
-            // ignore
-        }
+    private fun performHaptic(type: NusaHapticEngine.FeedbackType = NusaHapticEngine.FeedbackType.LIGHT_TICK) {
+        hapticEngine?.perform(type, notchCard)
     }
 
     private fun getAppLabel(pkg: String): String {

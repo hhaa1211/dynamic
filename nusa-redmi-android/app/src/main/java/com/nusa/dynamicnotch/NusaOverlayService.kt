@@ -37,14 +37,14 @@ class NusaOverlayService : LifecycleService() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // Redmi Note 13 Pro 5G Dimensions (calibrated)
-    private var collapsedWidthDp = 136
-    private var collapsedHeightDp = 42
+    private var collapsedWidthDp = 138
+    private var collapsedHeightDp = 46
     private var yOffsetDp = 4
     private var eyeSpacingDp = 72
     private var eyeYOffsetDp = 0
     private var eyeSizeDp = 10
     private var expandedWidthDp = 350
-    private var expandedHeightDp = 175
+    private var expandedHeightDp = 195
 
     // Views
     private lateinit var layerPet: View
@@ -180,8 +180,8 @@ class NusaOverlayService : LifecycleService() {
         // Read user preferences
         val prefs = getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
         yOffsetDp = prefs.getInt("y_offset", 4)
-        collapsedWidthDp = prefs.getInt("notch_width", 136)
-        collapsedHeightDp = prefs.getInt("notch_height", 42)
+        collapsedWidthDp = prefs.getInt("notch_width", 138)
+        collapsedHeightDp = prefs.getInt("notch_height", 46)
         eyeSpacingDp = prefs.getInt("eye_spacing", 72)
         eyeYOffsetDp = prefs.getInt("eye_y_offset", 0)
         eyeSizeDp = prefs.getInt("eye_size", 10)
@@ -195,7 +195,7 @@ class NusaOverlayService : LifecycleService() {
 
         // Window height extends past the 122px HyperOS status bar boundary to guarantee touch delivery
         val initialW = dpToPx(maxOf(collapsedWidthDp + 24, 160))
-        val initialH = dpToPx(maxOf(collapsedHeightDp + 24, 66))
+        val initialH = dpToPx(maxOf(collapsedHeightDp + 26, 72))
 
         params = WindowManager.LayoutParams(
             initialW,
@@ -321,7 +321,7 @@ class NusaOverlayService : LifecycleService() {
 
             // Extended hit box guarantees touch events bypass HyperOS status bar gesture interceptor
             params.width = dpToPx(maxOf(collapsedWidthDp + 24, 160))
-            params.height = dpToPx(maxOf(collapsedHeightDp + 24, 66))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 26, 72))
         }
 
         try {
@@ -445,7 +445,7 @@ class NusaOverlayService : LifecycleService() {
         ) {
             // Shrink window back to hit box bounds on animation end
             params.width = dpToPx(maxOf(collapsedWidthDp + 24, 160))
-            params.height = dpToPx(maxOf(collapsedHeightDp + 24, 66))
+            params.height = dpToPx(maxOf(collapsedHeightDp + 26, 72))
             try {
                 windowManager.updateViewLayout(overlayView, params)
             } catch (e: Exception) {

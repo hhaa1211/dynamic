@@ -88,8 +88,8 @@ class MainActivity : AppCompatActivity() {
         val eyeY = prefs.getInt("eye_y_offset", 0) // range: -15 to +25 -> progress 0 to 40
         val eyeSize = prefs.getInt("eye_size", 10)  // range: 6 to 18 -> progress 0 to 12
         val yOffset = prefs.getInt("y_offset", 4)
-        val notchW = prefs.getInt("notch_width", 136)
-        val notchH = prefs.getInt("notch_height", 44)
+        val notchW = prefs.getInt("notch_width", 138)
+        val notchH = prefs.getInt("notch_height", 46)
 
         seekEyeSpacing.progress = spacing
         seekEyeYOffset.progress = eyeY + 15
@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
 
         // Fast Preset 1: Né camera chuẩn Redmi Note 13 Pro 5G
         btnPresetRedmi.setOnClickListener {
-            applyPreset(spacing = 72, eyeY = 0, eyeSize = 10, yOffset = 4, notchW = 136, notchH = 44)
+            applyPreset(spacing = 72, eyeY = 0, eyeSize = 10, yOffset = 4, notchW = 138, notchH = 46)
             Toast.makeText(this, "Đã áp dụng: Né camera chuẩn Redmi Note 13 Pro 5G", Toast.LENGTH_SHORT).show()
         }
 

@@ -232,6 +232,80 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <!-- Compact 6: Incoming Message Notification (App Icon + Sender / Dot) -->
+            <LinearLayout
+                android:id="@+id/compactNotification"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ivCompactNotifIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:scaleType="centerCrop" />
+
+                <!-- Center: Clearance for camera cutout -->
+                <View
+                    android:id="@+id/compactNotifCutout"
+                    android:layout_width="72dp"
+                    android:layout_height="14dp" />
+
+                <!-- Trailing: App Badge / Bubble -->
+                <TextView
+                    android:id="@+id/tvCompactNotifBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_route_pill"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:text="Tin nhắn"
+                    android:textColor="#38BDF8"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Compact 7: Ringer / Silent Switch (Bell + Mode) -->
+            <LinearLayout
+                android:id="@+id/compactRinger"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvRingerIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:gravity="center"
+                    android:text="🔔"
+                    android:textSize="13sp" />
+
+                <!-- Center: Clearance for camera cutout -->
+                <View
+                    android:id="@+id/compactRingerCutout"
+                    android:layout_width="72dp"
+                    android:layout_height="14dp" />
+
+                <TextView
+                    android:id="@+id/tvRingerText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Im lặng"
+                    android:textColor="#FF453A"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
 
             <!-- ========================================================= -->
             <!-- 2. EXPANDED PRESENTATIONS (Apple Expanded Contextual Card) -->
@@ -716,6 +790,120 @@
                         android:text="📞"
                         android:textColor="#FFFFFF"
                         android:textSize="18sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Expanded 5: Incoming Message Notification Banner -->
+            <LinearLayout
+                android:id="@+id/layerNotification"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="38dp"
+                android:paddingBottom="12dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvNotifAppBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_route_pill"
+                        android:paddingStart="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="3dp"
+                        android:text="💬 THÔNG BÁO MỚI"
+                        android:textColor="@color/cyan_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/btnCloseNotif"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:text="✕"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/ivNotifLargeIcon"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_notch_pill"
+                        android:scaleType="centerCrop" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvNotifSender"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Người gửi"
+                            android:textColor="@color/ink_white"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNotifBody"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:ellipsize="end"
+                            android:maxLines="2"
+                            android:text="Nội dung tin nhắn..."
+                            android:textColor="@color/slate_silver"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnOpenNotif"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_call_accept"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:text="Mở ứng dụng ↗"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
 

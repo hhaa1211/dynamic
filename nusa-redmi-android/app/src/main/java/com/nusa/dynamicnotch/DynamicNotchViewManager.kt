@@ -1,27 +1,39 @@
 package com.nusa.dynamicnotch
 
-import com.nusa.dynamicnotch.models.NotchState
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.PixelFormat
+import android.media.AudioManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import com.nusa.dynamicnotch.models.NotchState
 import kotlin.math.abs
 
 @SuppressLint("StaticFieldLeak")
@@ -38,6 +50,7 @@ object DynamicNotchViewManager {
         private set
 
     private var currentState: NotchState = NotchState.PET
+    private var previousState: NotchState = NotchState.PET
     private var isExpanded: Boolean = false
     private var isMinimalMode: Boolean = false
 
@@ -52,7 +65,7 @@ object DynamicNotchViewManager {
     private var eyeYOffsetDp: Int = 0
     private var eyeSizeDp: Int = 10
 
-    // Views
+    // Root views
     private var notchContainer: View? = null
     private var notchCard: CardView? = null
     private var detachedBubble: CardView? = null
@@ -64,6 +77,9 @@ object DynamicNotchViewManager {
     private var compactPomo: View? = null
     private var compactCharging: View? = null
     private var compactCall: View? = null
+    private var compactNotification: View? = null
+    private var compactRinger: View? = null
+
     private var leftEye: View? = null
     private var rightEye: View? = null
     private var cameraSpace: View? = null
@@ -73,6 +89,13 @@ object DynamicNotchViewManager {
     private var compactPomoCutout: View? = null
     private var compactChargeCutout: View? = null
     private var compactCallCutout: View? = null
+    private var compactNotifCutout: View? = null
+    private var compactRingerCutout: View? = null
+
+    private var ivCompactNotifIcon: ImageView? = null
+    private var tvCompactNotifBadge: TextView? = null
+    private var tvRingerIcon: TextView? = null
+    private var tvRingerText: TextView? = null
 
     private var tvCompactPomoTime: TextView? = null
     private var tvCompactChargePercent: TextView? = null
@@ -89,8 +112,10 @@ object DynamicNotchViewManager {
     private var layerPomo: View? = null
     private var layerCharging: View? = null
     private var layerCall: View? = null
+    private var layerNotification: View? = null
 
     // Music controls
+    private var tvOutputRoute: TextView? = null
     private var tvMusicTitle: TextView? = null
     private var tvMusicArtist: TextView? = null
     private var tvTimeCurrent: TextView? = null
@@ -112,11 +137,24 @@ object DynamicNotchViewManager {
     private var btnDeclineCall: TextView? = null
     private var btnCloseCall: TextView? = null
 
+    // Notification controls
+    private var tvNotifAppBadge: TextView? = null
+    private var ivNotifLargeIcon: ImageView? = null
+    private var tvNotifSender: TextView? = null
+    private var tvNotifBody: TextView? = null
+    private var btnOpenNotif: Button? = null
+    private var btnCloseNotif: TextView? = null
+    private var currentNotifPendingIntent: PendingIntent? = null
+
+    // Charging controls
+    private var tvChargePercentage: TextView? = null
+
     // Runnables & State
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var isRealMediaActive = false
     private var isPlaying = true
     private var progressValue = 125
-    private val totalDuration = 220
+    private var totalDuration = 220
     private var pomoSeconds = 25 * 60
     private var isPomoRunning = true
     private var callSeconds = 42
@@ -129,9 +167,12 @@ object DynamicNotchViewManager {
     )
     private var currentSongIdx = 0
 
+    // Apple Spring Curve (iOS 17 fluid spring physics)
+    private val appleSpringInterpolator = PathInterpolator(0.22f, 1f, 0.36f, 1f)
+
     private val progressRunnable = object : Runnable {
         override fun run() {
-            if (isPlaying) {
+            if (isPlaying && !isRealMediaActive) {
                 progressValue++
                 if (progressValue > totalDuration) progressValue = 0
                 musicProgressBar?.progress = progressValue
@@ -181,7 +222,7 @@ object DynamicNotchViewManager {
         private var frame = 0
 
         override fun run() {
-            if (compactMusic?.visibility == View.VISIBLE || isMinimalMode) {
+            if ((compactMusic?.visibility == View.VISIBLE || isMinimalMode) && isPlaying) {
                 val currentFrame = heights[frame % heights.size]
                 val bars = listOf(eqBar1, eqBar2, eqBar3, eqBar4)
                 bars.forEachIndexed { i, bar ->
@@ -212,9 +253,30 @@ object DynamicNotchViewManager {
         }
     }
 
-    private val eventReceiver = object : BroadcastReceiver() {
+    private val systemReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
+                Intent.ACTION_BATTERY_CHANGED -> {
+                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                            status == BatteryManager.BATTERY_STATUS_FULL
+                    val pct = if (scale > 0) (level * 100) / scale else level
+
+                    tvCompactChargePercent?.text = "$pct%"
+                    tvChargePercentage?.text = "$pct%"
+
+                    if (isCharging && currentState != NotchState.CHARGING) {
+                        performHaptic()
+                        setNotchState(NotchState.CHARGING)
+                    }
+                }
+                AudioManager.RINGER_MODE_CHANGED_ACTION -> {
+                    val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                    val mode = audioManager?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
+                    showRingerHUD(mode)
+                }
                 NusaOverlayService.ACTION_SET_STATE -> {
                     val stateStr = intent.getStringExtra("state") ?: "PET"
                     val targetState = try {
@@ -222,23 +284,8 @@ object DynamicNotchViewManager {
                     } catch (e: Exception) {
                         NotchState.PET
                     }
+                    performHaptic()
                     setNotchState(targetState)
-                }
-                NusaOverlayService.ACTION_UPDATE_EVENT -> {
-                    val type = intent.getStringExtra("event_type") ?: ""
-                    when (type) {
-                        "MUSIC_PLAY" -> {
-                            val title = intent.getStringExtra("title") ?: "Now Playing"
-                            val artist = intent.getStringExtra("artist") ?: "Artist"
-                            tvMusicTitle?.text = title
-                            tvMusicArtist?.text = artist
-                            setNotchState(NotchState.MUSIC)
-                        }
-                        "POMO_START" -> setNotchState(NotchState.POMODORO)
-                        "CHARGING" -> setNotchState(NotchState.CHARGING)
-                        "CALL_INCOMING" -> setNotchState(NotchState.CALL)
-                        "PET" -> setNotchState(NotchState.PET)
-                    }
                 }
                 NusaOverlayService.ACTION_UPDATE_CONFIG -> {
                     collapsedWidthDp = intent.getIntExtra("notch_width", collapsedWidthDp)
@@ -248,12 +295,6 @@ object DynamicNotchViewManager {
                     eyeSizeDp = intent.getIntExtra("eye_size", eyeSizeDp)
                     applyEyeAndNotchConfig()
                 }
-                Intent.ACTION_POWER_CONNECTED -> {
-                    setNotchState(NotchState.CHARGING)
-                    mainHandler.postDelayed({
-                        setNotchState(NotchState.PET)
-                    }, 4000)
-                }
             }
         }
     }
@@ -261,7 +302,6 @@ object DynamicNotchViewManager {
     fun attach(context: Context, asAccessibility: Boolean) {
         if (isAttached) {
             if (isAccessibilityMode && !asAccessibility) {
-                // Already running with higher-priority accessibility overlay
                 return
             }
             detach()
@@ -285,6 +325,9 @@ object DynamicNotchViewManager {
         compactPomo = overlayView?.findViewById(R.id.compactPomo)
         compactCharging = overlayView?.findViewById(R.id.compactCharging)
         compactCall = overlayView?.findViewById(R.id.compactCall)
+        compactNotification = overlayView?.findViewById(R.id.compactNotification)
+        compactRinger = overlayView?.findViewById(R.id.compactRinger)
+
         leftEye = overlayView?.findViewById(R.id.leftEye)
         rightEye = overlayView?.findViewById(R.id.rightEye)
         cameraSpace = overlayView?.findViewById(R.id.cameraSpace)
@@ -294,6 +337,13 @@ object DynamicNotchViewManager {
         compactPomoCutout = overlayView?.findViewById(R.id.compactPomoCutout)
         compactChargeCutout = overlayView?.findViewById(R.id.compactChargeCutout)
         compactCallCutout = overlayView?.findViewById(R.id.compactCallCutout)
+        compactNotifCutout = overlayView?.findViewById(R.id.compactNotifCutout)
+        compactRingerCutout = overlayView?.findViewById(R.id.compactRingerCutout)
+
+        ivCompactNotifIcon = overlayView?.findViewById(R.id.ivCompactNotifIcon)
+        tvCompactNotifBadge = overlayView?.findViewById(R.id.tvCompactNotifBadge)
+        tvRingerIcon = overlayView?.findViewById(R.id.tvRingerIcon)
+        tvRingerText = overlayView?.findViewById(R.id.tvRingerText)
 
         tvCompactPomoTime = overlayView?.findViewById(R.id.tvCompactPomoTime)
         tvCompactChargePercent = overlayView?.findViewById(R.id.tvCompactChargePercent)
@@ -305,11 +355,12 @@ object DynamicNotchViewManager {
         eqBar3 = overlayView?.findViewById(R.id.eqBar3)
         eqBar4 = overlayView?.findViewById(R.id.eqBar4)
 
-        // Expanded Presentation Views
+        // Expanded Views
         layerMusic = overlayView?.findViewById(R.id.layerMusic)
         layerPomo = overlayView?.findViewById(R.id.layerPomo)
         layerCharging = overlayView?.findViewById(R.id.layerCharging)
         layerCall = overlayView?.findViewById(R.id.layerCall)
+        layerNotification = overlayView?.findViewById(R.id.layerNotification)
 
         // Preferences
         val prefs = context.getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
@@ -322,7 +373,7 @@ object DynamicNotchViewManager {
 
         // Window Layout Flags & Type
         val layoutType = if (asAccessibility) {
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY // Layer 161,000 (ABOVE StatusBar 151,000!)
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY // Layer 311,000 (Above System StatusBar)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -359,8 +410,9 @@ object DynamicNotchViewManager {
         initMusicPlayerControls()
         initPomoControls()
         initCallControls()
+        initNotificationControls()
 
-        // ULTRA-RESPONSIVE DIRECT TOUCH DETECTION (Zero lag, no cancel on micro-scrolls)
+        // 0ms delay direct touch interaction
         setupTouchInteraction()
 
         try {
@@ -370,7 +422,7 @@ object DynamicNotchViewManager {
             e.printStackTrace()
         }
 
-        registerReceivers(context)
+        registerSystemReceivers(context)
 
         mainHandler.post(progressRunnable)
         mainHandler.post(pomoRunnable)
@@ -382,7 +434,7 @@ object DynamicNotchViewManager {
     fun detach() {
         if (!isAttached) return
         try {
-            unregisterReceivers()
+            unregisterSystemReceivers()
             mainHandler.removeCallbacksAndMessages(null)
             overlayView?.let { windowManager?.removeView(it) }
         } catch (e: Exception) {
@@ -395,23 +447,23 @@ object DynamicNotchViewManager {
         }
     }
 
-    private fun registerReceivers(context: Context) {
+    private fun registerSystemReceivers(context: Context) {
         val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+            addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(NusaOverlayService.ACTION_SET_STATE)
-            addAction(NusaOverlayService.ACTION_UPDATE_EVENT)
             addAction(NusaOverlayService.ACTION_UPDATE_CONFIG)
-            addAction(Intent.ACTION_POWER_CONNECTED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(eventReceiver, filter, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(systemReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
-            context.registerReceiver(eventReceiver, filter)
+            context.registerReceiver(systemReceiver, filter)
         }
     }
 
-    private fun unregisterReceivers() {
+    private fun unregisterSystemReceivers() {
         try {
-            currentContext?.unregisterReceiver(eventReceiver)
+            currentContext?.unregisterReceiver(systemReceiver)
         } catch (e: Exception) {
             // ignore
         }
@@ -437,22 +489,45 @@ object DynamicNotchViewManager {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val dx = abs(event.rawX - startX)
+                    val dx = event.rawX - startX
                     val dy = event.rawY - startY
                     val duration = System.currentTimeMillis() - startTime
 
                     if (dy > 30 && !isExpanded) {
                         // Swipe down -> Expand
+                        performHaptic()
                         expandCurrentState()
                         true
                     } else if (dy < -30 && isExpanded) {
                         // Swipe up -> Collapse
+                        performHaptic()
                         collapseToCompact()
                         true
-                    } else if (dx < 60 && abs(dy) < 60 && duration < 600) {
-                        // Direct Tap on Notch
+                    } else if (abs(dx) > 50 && abs(dy) < 40 && currentState == NotchState.MUSIC && !isExpanded) {
+                        // Horizontal swipe on compact music -> Next/Prev track
+                        performHaptic()
+                        if (dx > 0) {
+                            if (isRealMediaActive) NusaNotificationListener.skipPrev()
+                            else skipPrevFallback()
+                        } else {
+                            if (isRealMediaActive) NusaNotificationListener.skipNext()
+                            else skipNextFallback()
+                        }
+                        true
+                    } else if (abs(dx) < 60 && abs(dy) < 60 && duration < 600) {
+                        // Tap on Notch
+                        performHaptic()
                         if (!isExpanded) {
-                            expandCurrentState()
+                            if (currentState == NotchState.NOTIFICATION && currentNotifPendingIntent != null) {
+                                try {
+                                    currentNotifPendingIntent?.send()
+                                    collapseToCompact()
+                                } catch (e: Exception) {
+                                    expandCurrentState()
+                                }
+                            } else {
+                                expandCurrentState()
+                            }
                         }
                         true
                     } else {
@@ -465,13 +540,15 @@ object DynamicNotchViewManager {
 
         // Secondary detached bubble interaction
         detachedBubble?.setOnClickListener {
+            performHaptic()
             if (isMinimalMode) {
                 setNotchState(NotchState.POMODORO)
             }
         }
 
-        // Click directly on notch card
+        // Direct click on card
         notchCard?.setOnClickListener {
+            performHaptic()
             if (!isExpanded) {
                 expandCurrentState()
             }
@@ -481,21 +558,20 @@ object DynamicNotchViewManager {
     private fun applyEyeAndNotchConfig() {
         params?.y = dpToPx(yOffsetDp)
 
-        // Eye spacing around Redmi punch-hole
-        cameraSpace?.layoutParams = cameraSpace?.layoutParams?.apply {
-            width = dpToPx(eyeSpacingDp)
-        }
-        compactMusicCutout?.layoutParams = compactMusicCutout?.layoutParams?.apply {
-            width = dpToPx(eyeSpacingDp)
-        }
-        compactPomoCutout?.layoutParams = compactPomoCutout?.layoutParams?.apply {
-            width = dpToPx(eyeSpacingDp)
-        }
-        compactChargeCutout?.layoutParams = compactChargeCutout?.layoutParams?.apply {
-            width = dpToPx(eyeSpacingDp)
-        }
-        compactCallCutout?.layoutParams = compactCallCutout?.layoutParams?.apply {
-            width = dpToPx(eyeSpacingDp)
+        // Cutouts
+        val cutouts = listOf(
+            cameraSpace,
+            compactMusicCutout,
+            compactPomoCutout,
+            compactChargeCutout,
+            compactCallCutout,
+            compactNotifCutout,
+            compactRingerCutout
+        )
+        cutouts.forEach { cutout ->
+            cutout?.layoutParams = cutout?.layoutParams?.apply {
+                width = dpToPx(eyeSpacingDp)
+            }
         }
 
         // Eye size
@@ -509,7 +585,7 @@ object DynamicNotchViewManager {
             height = sizePx
         }
 
-        // Eye vertical offset
+        // Eye offset
         eyesContainer?.translationY = dpToPx(eyeYOffsetDp).toFloat()
 
         if (!isExpanded) {
@@ -529,6 +605,7 @@ object DynamicNotchViewManager {
         val targetWidth = when (currentState) {
             NotchState.PET -> collapsedWidthDp
             NotchState.MINIMAL -> compactActivityWidthDp
+            NotchState.RINGER -> 148
             else -> compactActivityWidthDp
         }
 
@@ -551,6 +628,7 @@ object DynamicNotchViewManager {
     }
 
     private fun initMusicPlayerControls() {
+        tvOutputRoute = overlayView?.findViewById(R.id.tvOutputRoute)
         tvMusicTitle = overlayView?.findViewById(R.id.tvMusicTitle)
         tvMusicArtist = overlayView?.findViewById(R.id.tvMusicArtist)
         tvTimeCurrent = overlayView?.findViewById(R.id.tvTimeCurrent)
@@ -564,27 +642,52 @@ object DynamicNotchViewManager {
         updateMusicDisplay()
 
         btnPlayPause?.setOnClickListener {
-            isPlaying = !isPlaying
-            btnPlayPause?.text = if (isPlaying) "⏸" else "▶"
+            performHaptic()
+            if (isRealMediaActive) {
+                if (isPlaying) NusaNotificationListener.pauseMedia()
+                else NusaNotificationListener.playMedia()
+            } else {
+                isPlaying = !isPlaying
+                btnPlayPause?.text = if (isPlaying) "⏸" else "▶"
+            }
         }
 
         btnNext?.setOnClickListener {
-            currentSongIdx = (currentSongIdx + 1) % songs.size
-            progressValue = 0
-            musicProgressBar?.progress = 0
-            updateMusicDisplay()
+            performHaptic()
+            if (isRealMediaActive) {
+                NusaNotificationListener.skipNext()
+            } else {
+                skipNextFallback()
+            }
         }
 
         btnPrev?.setOnClickListener {
-            currentSongIdx = if (currentSongIdx - 1 < 0) songs.size - 1 else currentSongIdx - 1
-            progressValue = 0
-            musicProgressBar?.progress = 0
-            updateMusicDisplay()
+            performHaptic()
+            if (isRealMediaActive) {
+                NusaNotificationListener.skipPrev()
+            } else {
+                skipPrevFallback()
+            }
         }
 
         btnCloseMusic?.setOnClickListener {
+            performHaptic()
             collapseToCompact()
         }
+    }
+
+    private fun skipNextFallback() {
+        currentSongIdx = (currentSongIdx + 1) % songs.size
+        progressValue = 0
+        musicProgressBar?.progress = 0
+        updateMusicDisplay()
+    }
+
+    private fun skipPrevFallback() {
+        currentSongIdx = if (currentSongIdx - 1 < 0) songs.size - 1 else currentSongIdx - 1
+        progressValue = 0
+        musicProgressBar?.progress = 0
+        updateMusicDisplay()
     }
 
     private fun initPomoControls() {
@@ -594,17 +697,20 @@ object DynamicNotchViewManager {
         btnClosePomo = overlayView?.findViewById(R.id.btnClosePomo)
 
         btnPomoToggle?.setOnClickListener {
+            performHaptic()
             isPomoRunning = !isPomoRunning
             btnPomoToggle?.text = if (isPomoRunning) "Tạm dừng" else "Tiếp tục"
         }
 
         btnPomoReset?.setOnClickListener {
+            performHaptic()
             pomoSeconds = 25 * 60
             isPomoRunning = true
             btnPomoToggle?.text = "Tạm dừng"
         }
 
         btnClosePomo?.setOnClickListener {
+            performHaptic()
             collapseToCompact()
         }
     }
@@ -615,14 +721,41 @@ object DynamicNotchViewManager {
         btnCloseCall = overlayView?.findViewById(R.id.btnCloseCall)
 
         btnAcceptCall?.setOnClickListener {
+            performHaptic()
             setNotchState(NotchState.PET)
         }
 
         btnDeclineCall?.setOnClickListener {
+            performHaptic()
             setNotchState(NotchState.PET)
         }
 
         btnCloseCall?.setOnClickListener {
+            performHaptic()
+            collapseToCompact()
+        }
+    }
+
+    private fun initNotificationControls() {
+        tvNotifAppBadge = overlayView?.findViewById(R.id.tvNotifAppBadge)
+        ivNotifLargeIcon = overlayView?.findViewById(R.id.ivNotifLargeIcon)
+        tvNotifSender = overlayView?.findViewById(R.id.tvNotifSender)
+        tvNotifBody = overlayView?.findViewById(R.id.tvNotifBody)
+        btnOpenNotif = overlayView?.findViewById(R.id.btnOpenNotif)
+        btnCloseNotif = overlayView?.findViewById(R.id.btnCloseNotif)
+
+        btnOpenNotif?.setOnClickListener {
+            performHaptic()
+            try {
+                currentNotifPendingIntent?.send()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            collapseToCompact()
+        }
+
+        btnCloseNotif?.setOnClickListener {
+            performHaptic()
             collapseToCompact()
         }
     }
@@ -631,6 +764,117 @@ object DynamicNotchViewManager {
         val (title, artist) = songs[currentSongIdx]
         tvMusicTitle?.text = title
         tvMusicArtist?.text = artist
+        tvOutputRoute?.text = "🎧 Redmi Note 13 Pro • Loa ngoài"
+    }
+
+    fun onMediaUpdated(
+        title: String,
+        artist: String,
+        albumArt: Bitmap?,
+        durationMs: Long,
+        positionMs: Long,
+        isPlaying: Boolean,
+        packageName: String
+    ) {
+        mainHandler.post {
+            this.isRealMediaActive = true
+            this.isPlaying = isPlaying
+
+            tvMusicTitle?.text = title
+            tvMusicArtist?.text = artist
+            btnPlayPause?.text = if (isPlaying) "⏸" else "▶"
+
+            val appLabel = getAppLabel(packageName)
+            tvOutputRoute?.text = "🎧 $appLabel • Loa ngoài"
+
+            if (durationMs > 0) {
+                this.totalDuration = (durationMs / 1000).toInt()
+                this.progressValue = (positionMs / 1000).toInt()
+                musicProgressBar?.max = totalDuration
+                musicProgressBar?.progress = progressValue
+
+                val curMin = progressValue / 60
+                val curSec = progressValue % 60
+                val remTotal = maxOf(0, totalDuration - progressValue)
+                val remMin = remTotal / 60
+                val remSec = remTotal % 60
+                tvTimeCurrent?.text = String.format("%d:%02d", curMin, curSec)
+                tvTimeRemaining?.text = String.format("-%d:%02d", remMin, remSec)
+            }
+
+            if (currentState != NotchState.MUSIC && !isExpanded) {
+                setNotchState(NotchState.MUSIC)
+            }
+        }
+    }
+
+    fun onNotificationReceived(
+        packageName: String,
+        title: String,
+        text: String,
+        largeIcon: Bitmap?,
+        pendingIntent: PendingIntent?
+    ) {
+        mainHandler.post {
+            previousState = currentState
+            currentNotifPendingIntent = pendingIntent
+
+            val appLabel = getAppLabel(packageName)
+            tvCompactNotifBadge?.text = appLabel
+            tvNotifAppBadge?.text = "💬 $appLabel"
+            tvNotifSender?.text = title
+            tvNotifBody?.text = text
+
+            if (largeIcon != null) {
+                ivCompactNotifIcon?.setImageBitmap(largeIcon)
+                ivNotifLargeIcon?.setImageBitmap(largeIcon)
+            } else {
+                ivCompactNotifIcon?.setImageResource(android.R.drawable.sym_action_chat)
+                ivNotifLargeIcon?.setImageResource(android.R.drawable.sym_action_chat)
+            }
+
+            performHaptic()
+            setNotchState(NotchState.NOTIFICATION)
+
+            // Auto-collapse / dismiss notification island after 4.5 seconds
+            mainHandler.removeCallbacks(dismissNotifRunnable)
+            mainHandler.postDelayed(dismissNotifRunnable, 4500)
+        }
+    }
+
+    private val dismissNotifRunnable = Runnable {
+        if (currentState == NotchState.NOTIFICATION) {
+            setNotchState(previousState)
+        }
+    }
+
+    private fun showRingerHUD(mode: Int) {
+        mainHandler.post {
+            previousState = currentState
+            when (mode) {
+                AudioManager.RINGER_MODE_SILENT, AudioManager.RINGER_MODE_VIBRATE -> {
+                    tvRingerIcon?.text = "🔕"
+                    tvRingerText?.text = "Im lặng"
+                    tvRingerText?.setTextColor(0xFFFF453A.toInt())
+                }
+                else -> {
+                    tvRingerIcon?.text = "🔔"
+                    tvRingerText?.text = "Chuông"
+                    tvRingerText?.setTextColor(0xFF34C759.toInt())
+                }
+            }
+            performHaptic()
+            setNotchState(NotchState.RINGER)
+
+            mainHandler.removeCallbacks(dismissRingerRunnable)
+            mainHandler.postDelayed(dismissRingerRunnable, 2500)
+        }
+    }
+
+    private val dismissRingerRunnable = Runnable {
+        if (currentState == NotchState.RINGER) {
+            setNotchState(previousState)
+        }
     }
 
     fun setNotchState(state: NotchState) {
@@ -644,7 +888,6 @@ object DynamicNotchViewManager {
                 detachedBubble?.visibility = View.GONE
             }
             NotchState.MUSIC -> {
-                updateMusicDisplay()
                 collapseToCompact()
                 showCompact(compactMusic)
                 detachedBubble?.visibility = View.GONE
@@ -669,29 +912,54 @@ object DynamicNotchViewManager {
                 expandCurrentState()
             }
             NotchState.MINIMAL -> {
-                updateMusicDisplay()
                 collapseToCompact()
                 showCompact(compactMusic)
                 detachedBubble?.visibility = View.VISIBLE
                 tvBubbleIcon?.text = "⏱️"
             }
+            NotchState.NOTIFICATION -> {
+                collapseToCompact()
+                showCompact(compactNotification)
+                detachedBubble?.visibility = View.GONE
+            }
+            NotchState.RINGER -> {
+                collapseToCompact()
+                showCompact(compactRinger)
+                detachedBubble?.visibility = View.GONE
+            }
         }
     }
 
     private fun showCompact(activeCompact: View?) {
-        listOf(compactPet, compactMusic, compactPomo, compactCharging, compactCall).forEach {
+        listOf(
+            compactPet,
+            compactMusic,
+            compactPomo,
+            compactCharging,
+            compactCall,
+            compactNotification,
+            compactRinger
+        ).forEach {
             it?.visibility = if (it == activeCompact) View.VISIBLE else View.GONE
         }
-        listOf(layerMusic, layerPomo, layerCharging, layerCall).forEach {
+        listOf(layerMusic, layerPomo, layerCharging, layerCall, layerNotification).forEach {
             it?.visibility = View.GONE
         }
     }
 
     private fun showExpanded(activeExpanded: View?) {
-        listOf(layerMusic, layerPomo, layerCharging, layerCall).forEach {
+        listOf(layerMusic, layerPomo, layerCharging, layerCall, layerNotification).forEach {
             it?.visibility = if (it == activeExpanded) View.VISIBLE else View.GONE
         }
-        listOf(compactPet, compactMusic, compactPomo, compactCharging, compactCall).forEach {
+        listOf(
+            compactPet,
+            compactMusic,
+            compactPomo,
+            compactCharging,
+            compactCall,
+            compactNotification,
+            compactRinger
+        ).forEach {
             it?.visibility = View.GONE
         }
     }
@@ -700,12 +968,9 @@ object DynamicNotchViewManager {
         isExpanded = true
         when (currentState) {
             NotchState.PET -> {
-                // Expanding Pet reveals quick music playback & controls
-                updateMusicDisplay()
                 showExpanded(layerMusic)
             }
             NotchState.MUSIC, NotchState.MINIMAL -> {
-                updateMusicDisplay()
                 showExpanded(layerMusic)
             }
             NotchState.POMODORO -> {
@@ -717,9 +982,15 @@ object DynamicNotchViewManager {
             NotchState.CALL -> {
                 showExpanded(layerCall)
             }
+            NotchState.NOTIFICATION -> {
+                showExpanded(layerNotification)
+            }
+            NotchState.RINGER -> {
+                collapseToCompact()
+                return
+            }
         }
 
-        // Hide detached bubble during expansion
         detachedBubble?.visibility = View.GONE
 
         val targetW = dpToPx(expandedWidthDp)
@@ -736,7 +1007,7 @@ object DynamicNotchViewManager {
             e.printStackTrace()
         }
 
-        animateCardSize(targetW, targetH, 28)
+        animateCardMorph(targetW, targetH, 28)
     }
 
     fun collapseToCompact() {
@@ -749,17 +1020,24 @@ object DynamicNotchViewManager {
             NotchState.POMODORO -> showCompact(compactPomo)
             NotchState.CHARGING -> showCompact(compactCharging)
             NotchState.CALL -> showCompact(compactCall)
+            NotchState.NOTIFICATION -> showCompact(compactNotification)
+            NotchState.RINGER -> showCompact(compactRinger)
             NotchState.MINIMAL -> {
                 showCompact(compactMusic)
                 detachedBubble?.visibility = View.VISIBLE
             }
         }
 
-        val targetW = dpToPx(if (currentState == NotchState.PET) collapsedWidthDp else compactActivityWidthDp)
+        val targetWidthDp = when (currentState) {
+            NotchState.PET -> collapsedWidthDp
+            NotchState.RINGER -> 148
+            else -> compactActivityWidthDp
+        }
+        val targetW = dpToPx(targetWidthDp)
         val targetH = dpToPx(collapsedHeightDp)
         val targetCorner = collapsedHeightDp / 2
 
-        animateCardSize(targetW, targetH, targetCorner) {
+        animateCardMorph(targetW, targetH, targetCorner) {
             try {
                 if (isAttached && overlayView != null && params != null) {
                     windowManager?.updateViewLayout(overlayView, params)
@@ -770,7 +1048,7 @@ object DynamicNotchViewManager {
         }
     }
 
-    private fun animateCardSize(
+    private fun animateCardMorph(
         targetWidthPx: Int,
         targetHeightPx: Int,
         targetCornerRadiusDp: Int,
@@ -782,8 +1060,8 @@ object DynamicNotchViewManager {
         val targetRadius = dpToPx(targetCornerRadiusDp).toFloat()
 
         val anim = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 320
-            interpolator = OvershootInterpolator(0.85f)
+            duration = 340
+            interpolator = appleSpringInterpolator
             addUpdateListener { va ->
                 val fraction = va.animatedFraction
                 val w = (currentWidth + (targetWidthPx - currentWidth) * fraction).toInt()
@@ -799,12 +1077,52 @@ object DynamicNotchViewManager {
                 notchCard?.radius = r
             }
         }
-        anim.start()
-        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: android.animation.Animator) {
+        anim.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
                 onEnd?.invoke()
             }
         })
+        anim.start()
+    }
+
+    private fun performHaptic() {
+        try {
+            val ctx = currentContext ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vm?.defaultVibrator?.vibrate(VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val v = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v?.vibrate(VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    v?.vibrate(12)
+                }
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    private fun getAppLabel(pkg: String): String {
+        val ctx = currentContext ?: return "Tin nhắn"
+        return try {
+            val pm = ctx.packageManager
+            val info = pm.getApplicationInfo(pkg, 0)
+            pm.getApplicationLabel(info).toString()
+        } catch (e: Exception) {
+            when {
+                pkg.contains("telegram", true) -> "Telegram"
+                pkg.contains("zalo", true) -> "Zalo"
+                pkg.contains("orca", true) || pkg.contains("messenger", true) -> "Messenger"
+                pkg.contains("whatsapp", true) -> "WhatsApp"
+                pkg.contains("spotify", true) -> "Spotify"
+                pkg.contains("youtube", true) -> "YouTube Music"
+                else -> "Thông báo"
+            }
+        }
     }
 
     private fun dpToPx(dp: Int): Int {

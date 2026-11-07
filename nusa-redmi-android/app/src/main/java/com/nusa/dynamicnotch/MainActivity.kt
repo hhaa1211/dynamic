@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchEnable: SwitchMaterial
     private lateinit var btnGrantOverlay: Button
     private lateinit var btnGrantNotification: Button
+    private lateinit var btnGrantAccessibility: Button
 
     private lateinit var seekEyeSpacing: SeekBar
     private lateinit var seekEyeYOffset: SeekBar
@@ -64,6 +65,7 @@ class MainActivity : AppCompatActivity() {
         switchEnable = findViewById(R.id.switchEnableNotch)
         btnGrantOverlay = findViewById(R.id.btnGrantOverlay)
         btnGrantNotification = findViewById(R.id.btnGrantNotification)
+        btnGrantAccessibility = findViewById(R.id.btnGrantAccessibility)
 
         btnPresetRedmi = findViewById(R.id.btnPresetRedmi)
         btnPresetWide = findViewById(R.id.btnPresetWide)
@@ -242,6 +244,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnTestMinimal).setOnClickListener {
             sendStateBroadcast("MINIMAL")
         }
+        findViewById<Button>(R.id.btnTestNotif).setOnClickListener {
+            sendStateBroadcast("NOTIFICATION")
+        }
+        findViewById<Button>(R.id.btnTestRinger).setOnClickListener {
+            sendStateBroadcast("RINGER")
+        }
+
+        btnGrantAccessibility.setOnClickListener {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
+        }
     }
 
     private fun applyPreset(spacing: Int, eyeY: Int, eyeSize: Int, yOffset: Int, notchW: Int, notchH: Int) {
@@ -274,6 +287,15 @@ class MainActivity : AppCompatActivity() {
         val hasNotif = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         btnGrantNotification.text = if (hasNotif) "Đã cấp ✓" else "Cấp quyền"
         btnGrantNotification.isEnabled = !hasNotif
+
+        val hasAccess = isAccessibilityEnabled()
+        btnGrantAccessibility.text = if (hasAccess) "Đã cấp ✓" else "Cấp quyền"
+        btnGrantAccessibility.isEnabled = !hasAccess
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+        return enabled.contains(packageName)
     }
 
     private fun requestOverlayPermission() {

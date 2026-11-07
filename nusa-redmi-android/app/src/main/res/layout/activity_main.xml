@@ -366,6 +366,41 @@
                 app:strokeColor="@color/line_border" />
         </LinearLayout>
 
+        <!-- Quick Action Row 3: Notification & Ringer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTestNotif"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="💬 Tin nhắn"
+                android:textColor="@color/ink_white"
+                android:textSize="11sp"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestRinger"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="🔔 Chuông"
+                android:textColor="@color/ink_white"
+                android:textSize="11sp"
+                app:strokeColor="@color/line_border" />
+        </LinearLayout>
+
         <!-- Permissions Section -->
         <TextView
             android:layout_width="wrap_content"
@@ -429,7 +464,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="24dp"
             app:cardBackgroundColor="@color/panel_black"
             app:cardCornerRadius="16dp">
 
@@ -469,6 +503,55 @@
                     android:backgroundTint="@color/violet_accent"
                     android:text="Cấp quyền"
                     android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Accessibility Service Card (Layer 311,000 Direct Notch Tap) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="28dp"
+            app:cardBackgroundColor="@color/panel_black"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Quyền Trợ năng (Chạm trực tiếp vào Notch)"
+                        android:textColor="@color/ink_white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Bypass hoàn toàn thanh trạng thái HyperOS"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnGrantAccessibility"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="#34D399"
+                    android:text="Cấp quyền"
+                    android:textColor="#000000"
                     android:textSize="11sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>

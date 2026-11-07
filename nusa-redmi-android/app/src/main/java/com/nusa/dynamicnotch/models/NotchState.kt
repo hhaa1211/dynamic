@@ -6,5 +6,7 @@ enum class NotchState {
     POMODORO,
     CHARGING,
     CALL,
-    MINIMAL
+    MINIMAL,
+    NOTIFICATION,
+    RINGER
 }

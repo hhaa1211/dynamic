@@ -40,6 +40,20 @@
                 android:value="Dynamic notch status overlay for punch-hole camera on Redmi Note 13 Pro 5G" />
         </service>
 
+        <!-- Accessibility Service for Direct Status Bar Touch Reception -->
+        <service
+            android:name=".NusaAccessibilityService"
+            android:label="@string/accessibility_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
         <!-- Notification & Media Session Listener -->
         <service
             android:name=".NusaNotificationListener"

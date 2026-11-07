@@ -6,4 +6,6 @@
     <string name="permission_overlay_title">Quyền hiển thị trên ứng dụng khác</string>
     <string name="permission_notification_title">Quyền truy cập thông báo &amp; âm nhạc</string>
     <string name="redmi_calibration_title">Căn chỉnh lỗ camera Redmi Note 13 Pro 5G</string>
+    <string name="accessibility_label">Nusa Dynamic Notch Gesture Service</string>
+    <string name="accessibility_desc">Cho phép Dynamic Notch tương tác trực tiếp qua cử chỉ chạm/vuốt quanh vùng camera nốt ruồi trên Redmi Note 13 Pro 5G</string>
 </resources>

@@ -265,7 +265,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="THỬ NGHIỆM TRẠNG THÁI NUSA"
+            android:text="THỬ NGHIỆM CÁC TÁC VỤ DYNAMIC ISLAND (APPLE)"
             android:textColor="@color/mist_gray"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -282,8 +282,11 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="🐾 Mắt Pet"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="🐾 Mascot"
                 android:textColor="@color/ink_white"
+                android:textSize="11sp"
                 app:strokeColor="@color/line_border" />
 
             <Button
@@ -291,21 +294,75 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
                 android:text="🎵 Nhạc"
                 android:textColor="@color/ink_white"
+                android:textSize="11sp"
                 app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestPomo"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="⏱️ Timer"
+                android:textColor="@color/ink_white"
+                android:textSize="11sp"
+                app:strokeColor="@color/line_border" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/btnTestCharge"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
                 android:text="⚡ Sạc 67W"
                 android:textColor="@color/ink_white"
+                android:textSize="11sp"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestCall"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="📞 Cuộc gọi"
+                android:textColor="@color/ink_white"
+                android:textSize="11sp"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestMinimal"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="🫧 Kép"
+                android:textColor="@color/ink_white"
+                android:textSize="11sp"
                 app:strokeColor="@color/line_border" />
         </LinearLayout>
 

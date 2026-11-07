@@ -230,8 +230,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnTestMusic).setOnClickListener {
             sendStateBroadcast("MUSIC")
         }
+        findViewById<Button>(R.id.btnTestPomo).setOnClickListener {
+            sendStateBroadcast("POMODORO")
+        }
         findViewById<Button>(R.id.btnTestCharge).setOnClickListener {
             sendStateBroadcast("CHARGING")
+        }
+        findViewById<Button>(R.id.btnTestCall).setOnClickListener {
+            sendStateBroadcast("CALL")
+        }
+        findViewById<Button>(R.id.btnTestMinimal).setOnClickListener {
+            sendStateBroadcast("MINIMAL")
         }
     }
 

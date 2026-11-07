@@ -1,5 +1,6 @@
 package com.nusa.dynamicnotch
 
+import com.nusa.dynamicnotch.models.NotchState
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver

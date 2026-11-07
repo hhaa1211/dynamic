@@ -27,5 +27,11 @@ class NusaAccessibilityService : AccessibilityService() {
         // Not used for overlay interactions
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        DynamicNotchViewManager.onOrientationChanged(isLandscape)
+    }
+
     override fun onInterrupt() {}
 }

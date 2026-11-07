@@ -162,6 +162,7 @@ object DynamicNotchViewManager {
     // Runnables & State
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isRealMediaActive = false
+    private var activeMediaPackage: String? = null
     private var isPlaying = true
     private var progressValue = 125
     private var totalDuration = 220
@@ -172,6 +173,25 @@ object DynamicNotchViewManager {
     private val pauseTimeoutRunnable = Runnable {
         if (currentState == NotchState.MUSIC && !isPlaying && !isExpanded) {
             setNotchState(NotchState.PET)
+        }
+    }
+
+    private val dismissChargeRunnable = Runnable {
+        if (currentState == NotchState.CHARGING) {
+            collapseToCompact()
+            showCompact(compactCharging)
+            mainHandler.postDelayed({
+                if (currentState == NotchState.CHARGING) {
+                    val target = if (previousState != NotchState.CHARGING && previousState != NotchState.NOTIFICATION && previousState != NotchState.RINGER) {
+                        previousState
+                    } else if (isRealMediaActive) {
+                        NotchState.MUSIC
+                    } else {
+                        NotchState.PET
+                    }
+                    setNotchState(target)
+                }
+            }, 2500)
         }
     }
 
@@ -293,6 +313,11 @@ object DynamicNotchViewManager {
                     val mode = audioManager?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
                     showRingerHUD(mode)
                 }
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (isExpanded) {
+                        collapseToCompact()
+                    }
+                }
                 NusaOverlayService.ACTION_SET_STATE -> {
                     val stateStr = intent.getStringExtra("state") ?: "PET"
                     val targetState = try {
@@ -390,7 +415,14 @@ object DynamicNotchViewManager {
 
         btnCloseCharge?.setOnClickListener {
             performHaptic()
-            collapseToCompact()
+            val target = if (previousState != NotchState.CHARGING && previousState != NotchState.NOTIFICATION && previousState != NotchState.RINGER) {
+                previousState
+            } else if (isRealMediaActive) {
+                NotchState.MUSIC
+            } else {
+                NotchState.PET
+            }
+            setNotchState(target)
         }
 
         // Preferences (Calibrated for Redmi Note 13 Pro 5G)
@@ -478,10 +510,17 @@ object DynamicNotchViewManager {
         }
     }
 
+    fun onOrientationChanged(isLandscape: Boolean) {
+        mainHandler.post {
+            overlayView?.visibility = if (isLandscape) View.GONE else View.VISIBLE
+        }
+    }
+
     private fun registerSystemReceivers(context: Context) {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+            addAction(Intent.ACTION_SCREEN_OFF)
             addAction(NusaOverlayService.ACTION_SET_STATE)
             addAction(NusaOverlayService.ACTION_UPDATE_CONFIG)
         }
@@ -624,20 +663,41 @@ object DynamicNotchViewManager {
                             performHaptic()
                             expandCurrentState()
                             true
-                        } else if (absDx < 30 && absDy < 30 && duration < 600) {
+                        } else if (duration >= 500 && absDx < 30 && absDy < 30) {
+                            // Long Press on Compact Notch -> Always expand into rich interactive widget
+                            performHaptic()
+                            expandCurrentState()
+                            true
+                        } else if (absDx < 30 && absDy < 30 && duration < 500) {
                             // Direct Tap on Notch
                             performHaptic()
-                            if (currentState == NotchState.NOTIFICATION && currentNotifPendingIntent != null) {
-                                try {
-                                    currentNotifPendingIntent?.send()
-                                    collapseToCompact()
-                                } catch (e: Exception) {
-                                    expandCurrentState()
+                            if (currentState == NotchState.NOTIFICATION) {
+                                if (currentNotifPendingIntent != null) {
+                                    try {
+                                        currentNotifPendingIntent?.send()
+                                        dismissTransientNotification()
+                                    } catch (e: Exception) {
+                                        expandCurrentState()
+                                    }
+                                } else {
+                                    dismissTransientNotification()
                                 }
                             } else if (currentState == NotchState.PET) {
                                 winkBothEyes()
-                                // If real media is active or paused, expand music
+                                // If real media is active or paused, switch to music
                                 if (isRealMediaActive) {
+                                    setNotchState(NotchState.MUSIC)
+                                }
+                            } else if (currentState == NotchState.MUSIC && !activeMediaPackage.isNullOrEmpty()) {
+                                try {
+                                    val intent = currentContext?.packageManager?.getLaunchIntentForPackage(activeMediaPackage!!)
+                                    if (intent != null) {
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        currentContext?.startActivity(intent)
+                                    } else {
+                                        expandCurrentState()
+                                    }
+                                } catch (e: Exception) {
                                     expandCurrentState()
                                 }
                             } else {
@@ -650,16 +710,20 @@ object DynamicNotchViewManager {
                     } else {
                         // --- EXPANDED GESTURES ---
                         if (dy < -30 && absDy > absDx) {
-                            // Swipe Up on expanded card -> Collapse
+                            // Swipe Up on expanded card -> Collapse or dismiss
                             performHaptic()
-                            collapseToCompact()
+                            if (currentState == NotchState.NOTIFICATION) {
+                                dismissTransientNotification()
+                            } else {
+                                collapseToCompact()
+                            }
                             true
                         } else if (currentState == NotchState.NOTIFICATION && absDx < 30 && absDy < 30 && duration < 600) {
                             // Tap on notification card opens app
                             if (currentNotifPendingIntent != null) {
                                 try {
                                     currentNotifPendingIntent?.send()
-                                    collapseToCompact()
+                                    dismissTransientNotification()
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }
@@ -795,6 +859,28 @@ object DynamicNotchViewManager {
             performHaptic()
             collapseToCompact()
         }
+
+        val openMusicAppListener = View.OnClickListener {
+            performHaptic()
+            val pkg = activeMediaPackage
+            if (!pkg.isNullOrEmpty()) {
+                try {
+                    val intent = currentContext?.packageManager?.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        currentContext?.startActivity(intent)
+                        collapseToCompact()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        tvMusicTitle?.setOnClickListener(openMusicAppListener)
+        tvMusicArtist?.setOnClickListener(openMusicAppListener)
+        ivMusicArtLarge?.setOnClickListener(openMusicAppListener)
+        cardCompactMusicArt?.setOnClickListener(openMusicAppListener)
+        tvOutputRoute?.setOnClickListener(openMusicAppListener)
     }
 
     private fun skipNextFallback() {
@@ -872,12 +958,12 @@ object DynamicNotchViewManager {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            collapseToCompact()
+            dismissTransientNotification()
         }
 
         btnCloseNotif?.setOnClickListener {
             performHaptic()
-            collapseToCompact()
+            dismissTransientNotification()
         }
     }
 
@@ -899,6 +985,7 @@ object DynamicNotchViewManager {
     ) {
         mainHandler.post {
             this.isRealMediaActive = true
+            this.activeMediaPackage = packageName
             this.isPlaying = isPlaying
 
             tvMusicTitle?.text = title
@@ -959,7 +1046,9 @@ object DynamicNotchViewManager {
         pendingIntent: PendingIntent?
     ) {
         mainHandler.post {
-            previousState = currentState
+            if (currentState != NotchState.NOTIFICATION && currentState != NotchState.RINGER) {
+                previousState = currentState
+            }
             currentNotifPendingIntent = pendingIntent
 
             val appLabel = getAppLabel(packageName)
@@ -985,15 +1074,29 @@ object DynamicNotchViewManager {
         }
     }
 
+    fun dismissTransientNotification() {
+        mainHandler.removeCallbacks(dismissNotifRunnable)
+        val target = if (previousState != NotchState.NOTIFICATION && previousState != NotchState.CHARGING && previousState != NotchState.RINGER) {
+            previousState
+        } else if (isRealMediaActive) {
+            NotchState.MUSIC
+        } else {
+            NotchState.PET
+        }
+        setNotchState(target)
+    }
+
     private val dismissNotifRunnable = Runnable {
         if (currentState == NotchState.NOTIFICATION) {
-            setNotchState(previousState)
+            dismissTransientNotification()
         }
     }
 
     private fun showRingerHUD(mode: Int) {
         mainHandler.post {
-            previousState = currentState
+            if (currentState != NotchState.RINGER && currentState != NotchState.NOTIFICATION) {
+                previousState = currentState
+            }
             when (mode) {
                 AudioManager.RINGER_MODE_SILENT, AudioManager.RINGER_MODE_VIBRATE -> {
                     tvRingerIcon?.text = "🔕"
@@ -1016,7 +1119,14 @@ object DynamicNotchViewManager {
 
     private val dismissRingerRunnable = Runnable {
         if (currentState == NotchState.RINGER) {
-            setNotchState(previousState)
+            val target = if (previousState != NotchState.RINGER && previousState != NotchState.NOTIFICATION && previousState != NotchState.CHARGING) {
+                previousState
+            } else if (isRealMediaActive) {
+                NotchState.MUSIC
+            } else {
+                NotchState.PET
+            }
+            setNotchState(target)
         }
     }
 
@@ -1043,12 +1153,8 @@ object DynamicNotchViewManager {
             NotchState.CHARGING -> {
                 showExpanded(layerCharging)
                 expandCurrentState()
-                mainHandler.postDelayed({
-                    if (currentState == NotchState.CHARGING) {
-                        collapseToCompact()
-                        showCompact(compactCharging)
-                    }
-                }, 3500)
+                mainHandler.removeCallbacks(dismissChargeRunnable)
+                mainHandler.postDelayed(dismissChargeRunnable, 3500)
             }
             NotchState.CALL -> {
                 showCompact(compactCall)

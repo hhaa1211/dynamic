@@ -41,6 +41,12 @@ class NusaOverlayService : LifecycleService() {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        DynamicNotchViewManager.onOrientationChanged(isLandscape)
+    }
+
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
         return null

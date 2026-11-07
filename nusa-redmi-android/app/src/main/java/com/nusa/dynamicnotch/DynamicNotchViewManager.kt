@@ -103,8 +103,6 @@ object DynamicNotchViewManager {
 
     // Pomodoro controls
     private var tvPomoTime: TextView? = null
-    private var tvPomoRound: TextView? = null
-    private var pomoProgressBar: ProgressBar? = null
     private var btnPomoToggle: TextView? = null
     private var btnPomoReset: TextView? = null
     private var btnClosePomo: TextView? = null
@@ -158,7 +156,6 @@ object DynamicNotchViewManager {
                 val timeStr = String.format("%02d:%02d", min, sec)
                 tvPomoTime?.text = timeStr
                 tvCompactPomoTime?.text = timeStr
-                pomoProgressBar?.progress = ((25 * 60 - pomoSeconds) * 100) / (25 * 60)
             }
             mainHandler.postDelayed(this, 1000)
         }
@@ -591,9 +588,7 @@ object DynamicNotchViewManager {
     }
 
     private fun initPomoControls() {
-        tvPomoTime = overlayView?.findViewById(R.id.tvPomoTime)
-        tvPomoRound = overlayView?.findViewById(R.id.tvPomoRound)
-        pomoProgressBar = overlayView?.findViewById(R.id.pomoProgressBar)
+        tvPomoTime = overlayView?.findViewById(R.id.tvPomoCountdown)
         btnPomoToggle = overlayView?.findViewById(R.id.btnPomoToggle)
         btnPomoReset = overlayView?.findViewById(R.id.btnPomoReset)
         btnClosePomo = overlayView?.findViewById(R.id.btnClosePomo)

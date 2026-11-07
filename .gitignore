@@ -22,3 +22,7 @@ Thumbs.db
 # Releases & APKs
 apk-release/
 *.apk
+platform-tools/
+scrcpy/
+phone_screenshot.png
+phone_notch_running.png

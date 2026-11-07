@@ -45,7 +45,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tối ưu cho Redmi Note 13 Pro 5G"
+                    android:text="Căn chỉnh camera Redmi Note 13 Pro 5G"
                     android:textColor="@color/cyan_accent"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -64,16 +64,170 @@
             android:layout_marginBottom="16dp"
             android:background="@color/line_border" />
 
-        <!-- Permissions Section -->
+        <!-- Redmi Note 13 Pro 5G Punch Hole Calibration -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="CÁC QUYỀN HỆ THỐNG CẦN THIẾT"
+            android:text="CĂN CHỈNH CAMERA NỐT RUỒI REDMI"
+            android:textColor="@color/cyan_accent"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:cardBackgroundColor="@color/panel_black"
+            app:cardCornerRadius="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- 1. Eye Spacing (Gap around camera) -->
+                <TextView
+                    android:id="@+id/tvEyeSpacingLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Khoảng cách 2 mắt né camera: 34dp"
+                    android:textColor="@color/green_charging"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <SeekBar
+                    android:id="@+id/seekEyeSpacing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="60"
+                    android:progress="34"
+                    android:progressTint="@color/green_charging"
+                    android:thumbTint="@color/green_charging" />
+
+                <!-- 2. Y-Offset -->
+                <TextView
+                    android:id="@+id/tvYOffsetLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Vị trí từ mép trên (Y-Offset): 6dp"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekYOffset"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="40"
+                    android:progress="6"
+                    android:progressTint="@color/cyan_accent"
+                    android:thumbTint="@color/cyan_accent" />
+
+                <!-- 3. Notch Width -->
+                <TextView
+                    android:id="@+id/tvWidthLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Độ rộng viên thuốc: 110dp"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekNotchWidth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="160"
+                    android:progress="110"
+                    android:progressTint="@color/cyan_accent"
+                    android:thumbTint="@color/cyan_accent" />
+
+                <!-- 4. Notch Height -->
+                <TextView
+                    android:id="@+id/tvHeightLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Chiều cao viên thuốc: 36dp"
+                    android:textColor="@color/ink_white"
+                    android:textSize="13sp" />
+
+                <SeekBar
+                    android:id="@+id/seekNotchHeight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:max="50"
+                    android:progress="36"
+                    android:progressTint="@color/cyan_accent"
+                    android:thumbTint="@color/cyan_accent" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Test Triggers -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="THỬ NGHIỆM TRẠNG THÁI NUSA"
             android:textColor="@color/mist_gray"
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <!-- 1. Overlay Permission -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTestPet"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🐾 Mắt Pet"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestMusic"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="🎵 Nhạc"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+
+            <Button
+                android:id="@+id/btnTestCharge"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="⚡ Sạc 67W"
+                android:textColor="@color/ink_white"
+                app:strokeColor="@color/line_border" />
+        </LinearLayout>
+
+        <!-- Permissions Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="CÁC QUYỀN HỆ THỐNG"
+            android:textColor="@color/mist_gray"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Overlay Permission Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -97,7 +251,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Quyền vẽ trên ứng dụng khác"
+                        android:text="Quyền hiển thị trên ứng dụng khác"
                         android:textColor="@color/ink_white"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -121,11 +275,12 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 2. Notification Access -->
+        <!-- Notification Access Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:layout_marginBottom="24dp"
             app:cardBackgroundColor="@color/panel_black"
             app:cardCornerRadius="16dp">
 
@@ -168,117 +323,6 @@
                     android:textSize="11sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
-
-        <!-- Redmi Note 13 Pro 5G Calibration Section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="CĂN CHỈNH CAMERA REDMI NOTE 13 PRO 5G"
-            android:textColor="@color/mist_gray"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/panel_black"
-            app:cardCornerRadius="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:id="@+id/tvYOffsetLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Khoảng cách từ mép trên màn hình (Y-Offset): 18dp"
-                    android:textColor="@color/ink_white"
-                    android:textSize="13sp" />
-
-                <SeekBar
-                    android:id="@+id/seekYOffset"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:max="60"
-                    android:progress="18"
-                    android:progressTint="@color/cyan_accent"
-                    android:thumbTint="@color/cyan_accent" />
-
-                <TextView
-                    android:id="@+id/tvWidthLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Độ rộng viên thuốc lúc đóng: 92dp"
-                    android:textColor="@color/ink_white"
-                    android:textSize="13sp" />
-
-                <SeekBar
-                    android:id="@+id/seekNotchWidth"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:max="160"
-                    android:progress="92"
-                    android:progressTint="@color/cyan_accent"
-                    android:thumbTint="@color/cyan_accent" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Quick State Triggers -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="THỬ NGHIỆM TRẠNG THÁI NUSA"
-            android:textColor="@color/mist_gray"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnTestPet"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🐾 Pet"
-                android:textColor="@color/ink_white"
-                app:strokeColor="@color/line_border" />
-
-            <Button
-                android:id="@+id/btnTestMusic"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="🎵 Nhạc"
-                android:textColor="@color/ink_white"
-                app:strokeColor="@color/line_border" />
-
-            <Button
-                android:id="@+id/btnTestCharge"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="⚡ Sạc 67W"
-                android:textColor="@color/ink_white"
-                app:strokeColor="@color/line_border" />
-        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

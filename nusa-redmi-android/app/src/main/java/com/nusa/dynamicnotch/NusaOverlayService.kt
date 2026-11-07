@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
-import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -17,7 +16,6 @@ import android.util.TypedValue
 import android.view.*
 import android.view.animation.OvershootInterpolator
 import android.widget.Button
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.app.NotificationCompat
@@ -36,10 +34,11 @@ class NusaOverlayService : LifecycleService() {
     private var isExpanded: Boolean = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Redmi Note 13 Pro 5G Dimensions (dp)
-    private var collapsedWidthDp = 92
-    private var collapsedHeightDp = 30
-    private var yOffsetDp = 18
+    // Redmi Note 13 Pro 5G Dimensions (calibrated)
+    private var collapsedWidthDp = 110
+    private var collapsedHeightDp = 36
+    private var yOffsetDp = 6
+    private var eyeSpacingDp = 34
     private var expandedWidthDp = 350
     private var expandedHeightDp = 160
 
@@ -51,6 +50,7 @@ class NusaOverlayService : LifecycleService() {
     private lateinit var layerCharging: View
     private lateinit var leftEye: View
     private lateinit var rightEye: View
+    private var cameraSpace: View? = null
 
     // Media & Battery
     private var currentSong = SongInfo()
@@ -75,6 +75,28 @@ class NusaOverlayService : LifecycleService() {
                         currentSong = SongInfo(title = title, artist = text)
                         updateMusicView()
                         setNotchState(NotchState.MUSIC)
+                    }
+                }
+                ACTION_UPDATE_CONFIG -> {
+                    yOffsetDp = intent.getIntExtra("y_offset", yOffsetDp)
+                    collapsedWidthDp = intent.getIntExtra("notch_width", collapsedWidthDp)
+                    collapsedHeightDp = intent.getIntExtra("notch_height", collapsedHeightDp)
+                    eyeSpacingDp = intent.getIntExtra("eye_spacing", eyeSpacingDp)
+
+                    params.y = dpToPx(yOffsetDp)
+                    cameraSpace?.let {
+                        val lp = it.layoutParams
+                        lp.width = dpToPx(eyeSpacingDp)
+                        it.layoutParams = lp
+                    }
+
+                    if (!isExpanded) {
+                        applyCollapsedDimensions()
+                    }
+                    try {
+                        windowManager.updateViewLayout(overlayView, params)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
@@ -109,7 +131,7 @@ class NusaOverlayService : LifecycleService() {
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Nusa Notch đang hoạt động")
-            .setContentText("Đang hiển thị quanh camera Redmi Note 13 Pro 5G")
+            .setContentText("Đang ôm sát camera Redmi Note 13 Pro 5G")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()
@@ -130,11 +152,21 @@ class NusaOverlayService : LifecycleService() {
         layerCharging = overlayView.findViewById(R.id.layerCharging)
         leftEye = overlayView.findViewById(R.id.leftEye)
         rightEye = overlayView.findViewById(R.id.rightEye)
+        cameraSpace = overlayView.findViewById(R.id.cameraSpace)
 
         // Read user preferences
         val prefs = getSharedPreferences("nusa_prefs", Context.MODE_PRIVATE)
-        yOffsetDp = prefs.getInt("y_offset", 18)
-        collapsedWidthDp = prefs.getInt("notch_width", 92)
+        yOffsetDp = prefs.getInt("y_offset", 6)
+        collapsedWidthDp = prefs.getInt("notch_width", 110)
+        collapsedHeightDp = prefs.getInt("notch_height", 36)
+        eyeSpacingDp = prefs.getInt("eye_spacing", 34)
+
+        // Apply camera clearance gap
+        cameraSpace?.let {
+            val lp = it.layoutParams
+            lp.width = dpToPx(eyeSpacingDp)
+            it.layoutParams = lp
+        }
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -215,7 +247,7 @@ class NusaOverlayService : LifecycleService() {
         animateCardSize(
             notchCard.width, dpToPx(expandedWidthDp),
             notchCard.height, dpToPx(expandedHeightDp),
-            dpToPx(16), dpToPx(28)
+            dpToPx(collapsedHeightDp / 2), dpToPx(28)
         )
     }
 
@@ -224,7 +256,7 @@ class NusaOverlayService : LifecycleService() {
         animateCardSize(
             notchCard.width, dpToPx(widthDp),
             notchCard.height, dpToPx(heightDp),
-            dpToPx(16), dpToPx(20)
+            dpToPx(collapsedHeightDp / 2), dpToPx(20)
         )
     }
 
@@ -233,7 +265,7 @@ class NusaOverlayService : LifecycleService() {
         animateCardSize(
             notchCard.width, dpToPx(collapsedWidthDp),
             notchCard.height, dpToPx(collapsedHeightDp),
-            dpToPx(28), dpToPx(16)
+            dpToPx(28), dpToPx(collapsedHeightDp / 2)
         )
         showLayer(layerPet)
     }
@@ -243,7 +275,7 @@ class NusaOverlayService : LifecycleService() {
         layoutParams.width = dpToPx(collapsedWidthDp)
         layoutParams.height = dpToPx(collapsedHeightDp)
         notchCard.layoutParams = layoutParams
-        notchCard.radius = dpToPx(16).toFloat()
+        notchCard.radius = dpToPx(collapsedHeightDp / 2).toFloat()
     }
 
     private fun animateCardSize(
@@ -297,6 +329,7 @@ class NusaOverlayService : LifecycleService() {
         val filter = IntentFilter().apply {
             addAction(ACTION_SET_STATE)
             addAction(ACTION_UPDATE_EVENT)
+            addAction(ACTION_UPDATE_CONFIG)
             addAction(Intent.ACTION_POWER_CONNECTED)
         }
         registerReceiver(eventReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -321,5 +354,6 @@ class NusaOverlayService : LifecycleService() {
     companion object {
         const val ACTION_SET_STATE = "com.nusa.dynamicnotch.ACTION_SET_STATE"
         const val ACTION_UPDATE_EVENT = "com.nusa.dynamicnotch.ACTION_UPDATE_EVENT"
+        const val ACTION_UPDATE_CONFIG = "com.nusa.dynamicnotch.ACTION_UPDATE_CONFIG"
     }
 }

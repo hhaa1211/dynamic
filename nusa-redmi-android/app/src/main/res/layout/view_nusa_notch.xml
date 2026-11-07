@@ -9,11 +9,11 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/notchCard"
-        android:layout_width="100dp"
-        android:layout_height="32dp"
+        android:layout_width="110dp"
+        android:layout_height="36dp"
         android:layout_gravity="center_horizontal"
         app:cardBackgroundColor="@color/notch_background"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="18dp"
         app:cardElevation="12dp">
 
         <FrameLayout
@@ -29,28 +29,35 @@
 
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="12dp"
+                    android:layout_height="14dp"
                     android:layout_gravity="bottom"
                     android:background="@drawable/bg_pet_ambient" />
 
+                <!-- Left Eye - Camera Space - Right Eye -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <View
                         android:id="@+id/leftEye"
-                        android:layout_width="7dp"
-                        android:layout_height="11dp"
-                        android:layout_marginEnd="12dp"
+                        android:layout_width="8dp"
+                        android:layout_height="13dp"
                         android:background="@drawable/bg_notch_pill"
                         android:backgroundTint="#FFFFFF" />
 
+                    <!-- Clear space for Redmi Note 13 Pro 5G punch hole camera -->
+                    <View
+                        android:id="@+id/cameraSpace"
+                        android:layout_width="34dp"
+                        android:layout_height="14dp" />
+
                     <View
                         android:id="@+id/rightEye"
-                        android:layout_width="7dp"
-                        android:layout_height="11dp"
+                        android:layout_width="8dp"
+                        android:layout_height="13dp"
                         android:background="@drawable/bg_notch_pill"
                         android:backgroundTint="#FFFFFF" />
                 </LinearLayout>
@@ -79,7 +86,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:text="18:55"
+                    android:text="13:15"
                     android:textColor="@color/ink_white"
                     android:textSize="12sp"
                     android:textStyle="bold" />
